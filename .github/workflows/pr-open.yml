@@ -1,0 +1,74 @@
+name: Pull Request
+
+on:
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  builds-retags:
+    name: Builds or Retags
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        package: [backend, database, frontend]
+        include:
+          - package: backend
+            triggers: ('backend/')
+          - package: database
+            triggers: ('database/')
+          - package: frontend
+            triggers: ('frontend/')
+    steps:
+      - uses: actions/checkout@v3
+      - uses: bcgov-nr/action-conditional-container-builder@v0.0.1
+        with:
+          package: ${{ matrix.package }}
+          tag: ${{ github.event.number }}
+          tag_fallback: test
+          repository: bcgov/nr-quickstart-typescript
+          token: ${{ secrets.GITHUB_TOKEN }}
+          triggers: ${{ matrix.triggers }}
+
+  deploys:
+    name: Deploys
+    needs:
+      - builds-retags
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        component: [backend, database, frontend, init]
+        include:
+          - component: backend
+            overwrite: true
+            template_file: backend/openshift.deploy.yml
+            template_vars: -p MIN_REPLICAS=1 -p MAX_REPLICAS=2
+          - component: database
+            overwrite: false
+            template_file: database/openshift.deploy.yml
+          - component: frontend
+            overwrite: true
+            template_file: frontend/openshift.deploy.yml
+            template_vars: -p MIN_REPLICAS=1 -p MAX_REPLICAS=2
+          - component: init
+            overwrite: false
+            template_file: common/openshift.init.yml
+    steps:
+      - uses: actions/checkout@v3
+      - name: Deploys
+        uses: ./
+        with:
+          component: ${{ matrix.component }}
+          oc_namespace: ${{ secrets.OC_NAMESPACE }}
+          oc_server: ${{ secrets.OC_SERVER }}
+          oc_token: ${{ secrets.OC_TOKEN }}
+          overwrite: ${{ matrix.overwrite }}
+          repository: bcgov/nr-quickstart-typescript
+          penetration_test: false
+          template_file: ${{ matrix.template_file }}
+          template_vars:
+            -p ZONE=${{ github.event.number }} -p NAME=${{ github.event.repository.name }}
+            -p PROMOTE=${{ github.repository }}/${{ matrix.component }}:${{ github.event.number }}
+            ${{ matrix.template_vars }}

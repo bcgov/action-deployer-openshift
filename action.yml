@@ -1,0 +1,130 @@
+name: OpenShift Deployer
+description: OpenShift deployer with deployment verification or penetration testing
+branding:
+  icon: package
+  color: blue
+
+inputs:
+  ### Required
+  component:
+    required: true
+    description: Component (e.g. backend, frontend), also used as path
+  oc_namespace:
+    required: true
+    description: OpenShift namespace (e.g. abc123-dev)
+  oc_server:
+    required: true
+    description: OpenShift server (e.g. https://api.silver.devops.gov.bc.ca:6443)
+  oc_token:
+    required: true
+    description: OpenShift access token
+  overwrite:
+    required: true
+    description: Replace existing objects/artifacts? (true|false)
+  template_file:
+    required: true
+    description: Template file (e.g. frontend/openshift.deploy.yml)
+
+  ### Typical / recommended
+  environment:
+    default: ""
+    description: GitHub environment containing required secrets
+  penetration_test:
+    default: "false"
+    description: Run a ZAProxy penetration test against any routes? [true/false]
+  penetration_test_fail:
+    default: "false"
+    description: Allow ZAProxy alerts to fail the workflow? [true/false]
+  penetration_test_issues:
+    default: "false"
+    description: Allow ZAProxy alerts to generate GitHub issues? [true/false]
+  template_vars:
+    default: ""
+    description: Template variables to pass (e.g. -p ZONE=...)
+
+  ### Usually a bad idea / not recommended
+  repository:
+    default: ${{ github.repository }}
+    required: false
+    description: Optionally, specify a different repo to clone
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/checkout@v3
+      with:
+        repository: ${{ github.repository }}
+
+    - name: Deploy
+      shell: bash
+      run: |
+        # Login to OpenShift (NOTE: project command is a safeguard)
+        oc login --token=${{ inputs.oc_token }} --server=${{ inputs.oc_server }}
+        oc project ${{ inputs.oc_namespace }}
+
+        # Process template, consuming variables/parameters
+        TEMPLATE=$(oc process -f ${{ inputs.template_file }} ${{ inputs.template_vars }} --local)
+
+        # ImageStream and DeploymentConfig names
+        IS=$(jq -rn "${TEMPLATE} | .items[] | select(.kind==\"ImageStream\") | .metadata.name")
+        DC=$(jq -rn "${TEMPLATE} | .items[] | select(.kind==\"DeploymentConfig\") | .metadata.name")
+
+        # Clean previous images
+        oc delete is/${IS} || true
+
+        # Apply (overwrites) or create (does not overwrite) using processed template
+        if [ "${{ inputs.overwrite }}" == "true" ]; then
+          oc apply -f - <<< "${TEMPLATE}"
+        else
+          # Suppress AlreadyExists errors and expected failure
+          oc create -f - 2>&1 <<< "${TEMPLATE}" | sed 's/.*: //'
+        fi
+
+        # Follow any active rollouts (see deploymentconfigs)
+        [ -z "${DC}" ]|| oc rollout status dc/${DC} -w
+
+    - name: Find Routes
+      id: get-route
+      shell: bash
+      run: |
+        # Pick out a url (host+path), if in template
+        URL=$( \
+          oc process -f ${{ inputs.template_file }} ${{ inputs.template_vars }} --local \
+            | jq -r '.items[] | select(.kind=="Route") | .spec | .host + "/" +.path' \
+        )
+        # If URL exists and is usable (e.g. at least a hostname), then save it
+        if [ ! -z "${URL%/*}" ]; then
+          echo "route=${URL}" >> $GITHUB_OUTPUT
+          echo "Route: ${{ steps.get-route.outputs.route }}"
+          exit 0
+        fi
+        echo "No routes found"
+
+    - name: Basic Deployment Verification
+      if: steps.get-route.outputs.route &&( inputs.penetration_test != 'true' )
+      shell: bash
+      run: |
+        # Curl URL and verify http code 200
+        URL="${{ steps.get-route.outputs.route }}"
+        echo -e "\n${URL}"
+        # Curl and verify, max 3 attempts
+        for (( i=0; i<3; i++ )); do
+          HTTP_CODE=$(curl -ILso /dev/null -w "%{http_code}" "${URL}")
+          if [ "${HTTP_CODE}" -eq 200 ]; then
+            echo -e "Deployment successful!"
+            exit
+          fi
+          echo -e "HTTP_CODE:${HTTP_CODE}, Try: #${i}"
+          sleep 10
+        done
+        echo -e "\nDeployment verification failed"
+        exit 1
+
+    - name: Penetration Test
+      if: steps.get-route.outputs.route &&( inputs.penetration_test == 'true' )
+      uses: zaproxy/action-full-scan@v0.4.0
+      with:
+        target: https://${{ steps.get-route.outputs.route }}
+        cmd_options: "-a"
+        allow_issue_writing: ${{ inputs.penetration_test_issues }}
+        fail_action: ${{ inputs.penetration_test_fail }}

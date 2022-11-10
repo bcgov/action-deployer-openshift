@@ -26,9 +26,6 @@ inputs:
     description: Template file (e.g. frontend/openshift.deploy.yml)
 
   ### Typical / recommended
-  environment:
-    default: ""
-    description: GitHub environment containing required secrets
   penetration_test:
     default: "false"
     description: Run a ZAProxy penetration test against any routes? [true/false]

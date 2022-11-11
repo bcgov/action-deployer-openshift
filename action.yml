@@ -1,5 +1,5 @@
 name: OpenShift Deployer
-description: OpenShift deployer with deployment verification or penetration testing
+description: OpenShift deployer with route verification or penetration testing
 branding:
   icon: package
   color: blue
@@ -91,7 +91,7 @@ runs:
         fi
         echo "No routes found"
 
-    - name: Basic Deployment Verification
+    - name: Route Verification
       if: steps.get-route.outputs.route &&( inputs.penetration_test != 'true' )
       shell: bash
       run: |
@@ -108,7 +108,7 @@ runs:
           echo -e "HTTP_CODE:${HTTP_CODE}, Try: #${i}"
           sleep 10
         done
-        echo -e "\nDeployment verification failed"
+        echo -e "\nRoute verification failed"
         exit 1
 
     - name: Penetration Test

@@ -9,18 +9,16 @@ concurrency:
 
 jobs:
   builds-retags:
-    name: Builds or Retags
+    name: Builds
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        package: [backend, database, frontend]
+        package: [backend, database]
         include:
           - package: backend
             triggers: ('backend/')
           - package: database
             triggers: ('database/')
-          - package: frontend
-            triggers: ('frontend/')
     steps:
       - uses: actions/checkout@v3
       - uses: bcgov-nr/action-conditional-container-builder@v0.0.2
@@ -41,7 +39,7 @@ jobs:
       packages: read
     strategy:
       matrix:
-        package: [backend, database, frontend, init]
+        package: [backend, database, init]
         include:
           - package: backend
             overwrite: true
@@ -50,10 +48,6 @@ jobs:
           - package: database
             overwrite: false
             template_file: database/openshift.deploy.yml
-          - package: frontend
-            overwrite: true
-            template_file: frontend/openshift.deploy.yml
-            template_vars: -p MIN_REPLICAS=1 -p MAX_REPLICAS=2
           - package: init
             overwrite: false
             template_file: common/openshift.init.yml

@@ -6,6 +6,9 @@ branding:
 
 inputs:
   ### Required
+  file:
+    description: Template file (e.g. frontend/openshift.deploy.yml)
+    required: true
   oc_namespace:
     description: OpenShift namespace (e.g. abc123-dev)
     required: true
@@ -18,18 +21,15 @@ inputs:
   overwrite:
     description: Replace existing objects/artifacts? (true|false)
     required: true
-  template_file:
-    description: Template file (e.g. frontend/openshift.deploy.yml)
-    required: true
 
   ### Typical / recommended
+  parameters:
+    description: Template parameters/variables to pass (e.g. -p ZONE=...)
   penetration_test:
     description: Run a ZAProxy penetration test against any routes? [true/false]
   penetration_test_fail:
     description: Allow ZAProxy alerts to fail the workflow? [true/false]
     default: "false"
-  template_vars:
-    description: Template variables to pass (e.g. -p ZONE=...)
 
   ### Usually a bad idea / not recommended
   repository:
@@ -54,7 +54,7 @@ runs:
         oc project ${{ inputs.oc_namespace }}
 
         # Process template, consuming variables/parameters
-        TEMPLATE=$(oc process -f ${{ inputs.template_file }} ${{ inputs.template_vars }} --local)
+        TEMPLATE=$(oc process -f ${{ inputs.file }} ${{ inputs.parameters }} --local)
 
         # ImageStream and DeploymentConfig names
         IS=$(jq -rn "${TEMPLATE} | .items[] | select(.kind==\"ImageStream\") | .metadata.name")
@@ -80,7 +80,7 @@ runs:
       run: |
         # Pick out a url (host+path), if in template
         URL=$( \
-          oc process -f ${{ inputs.template_file }} ${{ inputs.template_vars }} --local \
+          oc process -f ${{ inputs.file }} ${{ inputs.parameters }} --local \
             | jq -r '.items[] | select(.kind=="Route") | .spec | .host + "/" +.path' \
         )
         # If URL exists and is usable (e.g. at least a hostname), then save it

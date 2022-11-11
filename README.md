@@ -17,6 +17,9 @@ Testing has only been done with public containers on ghcr.io (GitHub Container R
   with:
     ### Required
 
+    # OpenShift template file
+    file: frontend/openshift.deploy.yml
+
     # OpenShift project/namespace
     oc_namespace: abc123-dev
 
@@ -25,17 +28,17 @@ Testing has only been done with public containers on ghcr.io (GitHub Container R
     
     # OpenShift token
     # Usually available as a secret in your project/namespace
-    oc_token: <sha...>
+    oc_token: ${{ secrets.OC_TOKEN }}
     
     # Overwrite objects using `oc apply` or only create with `oc create`
     # Expected errors from `oc create` are handled with `set +o pipefail`
     overwrite: true
 
-    # OpenShift template file
-    template_file: frontend/openshift.deploy.yml
-
 
     ### Typical / recommended
+
+    # Template parameters/variables to pass
+    parameters: -p PR_NO=${{ github.event.number }}
 
     # Run a ZAProxy penetration test against any routes? [true/false]
     penetration_test: false
@@ -68,8 +71,8 @@ deploys:
         oc_server: ${{ secrets.OC_SERVER }}
         oc_token: ${{ secrets.OC_TOKEN }}
         overwrite: yes
-        template_file: frontend/openshift.deploy.yml
-        template_vars:
+        file: frontend/openshift.deploy.yml
+        parameters:
           -p MIN_REPLICAS=1 -p MAX_REPLICAS=2
           -p PR_NUMBER=${{ github.event.number }}
 ```
@@ -83,22 +86,22 @@ deploys:
 name: Deploys
 runs-on: ubuntu-latest
   matrix:
-  package: [backend, database, frontend, init]
+  name: [backend, database, frontend, init]
   include:
-    - package: backend
-    overwrite: true
-    template_file: backend/openshift.deploy.yml
-    template_vars: -p MIN_REPLICAS=1 -p MAX_REPLICAS=2
-    - package: database
-    overwrite: false
-    template_file: database/openshift.deploy.yml
-    - package: frontend
-    overwrite: true
-    template_file: frontend/openshift.deploy.yml
-    template_vars: -p MIN_REPLICAS=1 -p MAX_REPLICAS=2
-    - package: init
-    overwrite: false
-    template_file: common/openshift.init.yml
+    - name: backend
+      file: backend/openshift.deploy.yml
+      overwrite: true
+      parameters: -p MIN_REPLICAS=1 -p MAX_REPLICAS=2
+    - name: database
+      overwrite: false
+      file: database/openshift.deploy.yml
+    - name: frontend
+      overwrite: true
+      file: frontend/openshift.deploy.yml
+      parameters: -p MIN_REPLICAS=1 -p MAX_REPLICAS=2
+    - name: init
+      overwrite: false
+      file: common/openshift.init.yml
 steps:
   - uses: actions/checkout@v3
   - name: Deploys
@@ -109,10 +112,10 @@ steps:
       oc_token: ${{ secrets.OC_TOKEN }}
       overwrite: ${{ matrix.overwrite }}
       penetration_test: true
-      template_file: ${{ matrix.template_file }}
-      template_vars:
-      -p COMMON_TEMPLATE_VAR=whatever-${{ github.event.number }}
-      ${{ matrix.template_vars }}
+      file: ${{ matrix.file }}
+      parameters:
+        -p COMMON_TEMPLATE_VAR=whatever-${{ github.event.number }}
+        ${{ matrix.parameters }}
 ```
 
 # Route Verification vs Penetration Testing

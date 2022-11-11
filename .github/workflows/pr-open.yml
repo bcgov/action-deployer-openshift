@@ -9,18 +9,16 @@ concurrency:
 
 jobs:
   builds-retags:
-    name: Builds or Retags
+    name: Builds
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        package: [backend, database, frontend]
+        package: [backend, database]
         include:
           - package: backend
             triggers: ('backend/')
           - package: database
             triggers: ('database/')
-          - package: frontend
-            triggers: ('frontend/')
     steps:
       - uses: actions/checkout@v3
       - uses: bcgov-nr/action-conditional-container-builder@v0.0.2
@@ -41,35 +39,31 @@ jobs:
       packages: read
     strategy:
       matrix:
-        package: [backend, database, frontend, init]
+        name: [backend, database, init]
         include:
-          - package: backend
+          - name: backend
+            file: backend/openshift.deploy.yml
             overwrite: true
-            template_file: backend/openshift.deploy.yml
-            template_vars: -p MIN_REPLICAS=1 -p MAX_REPLICAS=2
-          - package: database
+            parameters: -p MIN_REPLICAS=1 -p MAX_REPLICAS=2
+          - name: database
+            file: database/openshift.deploy.yml
             overwrite: false
-            template_file: database/openshift.deploy.yml
-          - package: frontend
-            overwrite: true
-            template_file: frontend/openshift.deploy.yml
-            template_vars: -p MIN_REPLICAS=1 -p MAX_REPLICAS=2
-          - package: init
+          - name: init
+            file: common/openshift.init.yml
             overwrite: false
-            template_file: common/openshift.init.yml
     steps:
       - uses: actions/checkout@v3
       - name: Deploys
         uses: ./
         with:
+          file: ${{ matrix.file }}
           oc_namespace: ${{ secrets.OC_NAMESPACE }}
           oc_server: ${{ secrets.OC_SERVER }}
           oc_token: ${{ secrets.OC_TOKEN }}
           overwrite: ${{ matrix.overwrite }}
-          repository: bcgov/nr-quickstart-typescript
           penetration_test: true
-          template_file: ${{ matrix.template_file }}
-          template_vars:
+          parameters:
             -p ZONE=${{ github.event.number }} -p NAME=${{ github.event.repository.name }}
-            -p PROMOTE=${{ github.repository }}/${{ matrix.package }}:${{ github.event.number }}
-            ${{ matrix.template_vars }}
+            -p PROMOTE=${{ github.repository }}/${{ matrix.name }}:${{ github.event.number }}
+            ${{ matrix.parameters }}
+          repository: bcgov/nr-quickstart-typescript

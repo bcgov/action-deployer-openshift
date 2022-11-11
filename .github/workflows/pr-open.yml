@@ -37,22 +37,24 @@ jobs:
     needs:
       - builds-retags
     runs-on: ubuntu-latest
+    permissions:
+      packages: read
     strategy:
       matrix:
-        component: [backend, database, frontend, init]
+        package: [backend, database, frontend, init]
         include:
-          - component: backend
+          - package: backend
             overwrite: true
             template_file: backend/openshift.deploy.yml
             template_vars: -p MIN_REPLICAS=1 -p MAX_REPLICAS=2
-          - component: database
+          - package: database
             overwrite: false
             template_file: database/openshift.deploy.yml
-          - component: frontend
+          - package: frontend
             overwrite: true
             template_file: frontend/openshift.deploy.yml
             template_vars: -p MIN_REPLICAS=1 -p MAX_REPLICAS=2
-          - component: init
+          - package: init
             overwrite: false
             template_file: common/openshift.init.yml
     steps:
@@ -60,15 +62,14 @@ jobs:
       - name: Deploys
         uses: ./
         with:
-          component: ${{ matrix.component }}
           oc_namespace: ${{ secrets.OC_NAMESPACE }}
           oc_server: ${{ secrets.OC_SERVER }}
           oc_token: ${{ secrets.OC_TOKEN }}
           overwrite: ${{ matrix.overwrite }}
           repository: bcgov/nr-quickstart-typescript
-          penetration_test: false
+          penetration_test: true
           template_file: ${{ matrix.template_file }}
           template_vars:
             -p ZONE=${{ github.event.number }} -p NAME=${{ github.event.repository.name }}
-            -p PROMOTE=${{ github.repository }}/${{ matrix.component }}:${{ github.event.number }}
+            -p PROMOTE=${{ github.repository }}/${{ matrix.package }}:${{ github.event.number }}
             ${{ matrix.template_vars }}

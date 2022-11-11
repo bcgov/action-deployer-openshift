@@ -6,43 +6,34 @@ branding:
 
 inputs:
   ### Required
-  component:
-    required: true
-    description: Component (e.g. backend, frontend), also used as path
   oc_namespace:
-    required: true
     description: OpenShift namespace (e.g. abc123-dev)
+    required: true
   oc_server:
-    required: true
     description: OpenShift server (e.g. https://api.silver.devops.gov.bc.ca:6443)
+    required: true
   oc_token:
-    required: true
     description: OpenShift access token
+    required: true
   overwrite:
-    required: true
     description: Replace existing objects/artifacts? (true|false)
-  template_file:
     required: true
+  template_file:
     description: Template file (e.g. frontend/openshift.deploy.yml)
+    required: true
 
   ### Typical / recommended
   penetration_test:
-    default: "false"
     description: Run a ZAProxy penetration test against any routes? [true/false]
   penetration_test_fail:
-    default: "false"
     description: Allow ZAProxy alerts to fail the workflow? [true/false]
-  penetration_test_issues:
     default: "false"
-    description: Allow ZAProxy alerts to generate GitHub issues? [true/false]
   template_vars:
-    default: ""
     description: Template variables to pass (e.g. -p ZONE=...)
 
   ### Usually a bad idea / not recommended
   repository:
     default: ${{ github.repository }}
-    required: false
     description: Optionally, specify a different repo to clone
 
 runs:
@@ -55,6 +46,9 @@ runs:
     - name: Deploy
       shell: bash
       run: |
+        # Allow pipefail, since we will be catching oc create errors
+        set +o pipefail
+
         # Login to OpenShift (NOTE: project command is a safeguard)
         oc login --token=${{ inputs.oc_token }} --server=${{ inputs.oc_server }}
         oc project ${{ inputs.oc_namespace }}
@@ -123,5 +117,8 @@ runs:
       with:
         target: https://${{ steps.get-route.outputs.route }}
         cmd_options: "-a"
-        allow_issue_writing: ${{ inputs.penetration_test_issues }}
         fail_action: ${{ inputs.penetration_test_fail }}
+        allow_issue_writing: false
+
+    - name: Checkout to make sure action.yml is present (tests)
+      uses: actions/checkout@v3

@@ -4,6 +4,10 @@
 [![Apache 2.0 License](https://img.shields.io/github/license/bcgov-nr/action-deployer-openshift.svg)](/LICENSE)
 [![Lifecycle](https://img.shields.io/badge/Lifecycle-Experimental-339999)](https://github.com/bcgov/repomountie/blob/master/doc/lifecycle-badges.md)
 
+!-- Reference-Style link -->
+[Issues]: https://docs.github.com/en/issues/tracking-your-work-with-issues/creating-an-issue
+[Pull Requests]: https://docs.github.com/en/desktop/contributing-and-collaborating-using-github-desktop/working-with-your-remote-repository-on-github-or-github-enterprise/creating-an-issue-or-pull-request
+
 # OpenShift Deployer with Route Verification or Penetration Testing
 
 GitHub Action. Deploy to OpenShift using templates. Runs route verification or penetration tests.  Most of the heavy lifting here is done in template configuration.
@@ -121,11 +125,9 @@ steps:
 
 # Route Verification vs Penetration Testing
 
-Deployment templates expect to find one or zero routes.
+Deployment templates are parsed for a route.  If found, those routes are verified with a curl command for status code 200 (success).  This ensures that applications are accessible from outside their OpenShift namespace/project.
 
-A curl command will be run against that route to make sure it is accessible from outside the OpenShift project/namespace.
-
-Using `penetration_test: true` will instead run OWASP ZAP (Zed Attack Proxy) against that route. `penetration_test_fail: false` can be used to fail pipelines if problems are found.
+Provide `penetration_test: true` to instead run a penetration test using [OWASP ZAP (Zed Attack Proxy)](https://github.com/zaproxy/action-full-scan) against that route. `penetration_test_fail: false` can be used to fail pipelines where problems are found.
 
 # Troubleshooting
 
@@ -133,9 +135,9 @@ Using `penetration_test: true` will instead run OWASP ZAP (Zed Attack Proxy) aga
 
 Pull requests created by Dependabot require their own secrets.  See `GitHub Repo > Settings > Secrets > Dependabot`.
 
-# Help / Call to Action
+# Feedback
 
-Please contribute your ideas!  We accept issues or pull requests.
+Please contribute your ideas!  [Issues] and [pull requests] are appreciated.
 
 Idea: Can anyone test with Kubernetes, which OpenShift is based on?
 

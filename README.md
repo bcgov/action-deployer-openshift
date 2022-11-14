@@ -67,11 +67,11 @@ deploys:
     - name: Deploys
       uses: bcgov-nr/action-deployer-openshift.yml@main
       with:
+        file: frontend/openshift.deploy.yml
         oc_namespace: ${{ secrets.OC_NAMESPACE }}
         oc_server: ${{ secrets.OC_SERVER }}
         oc_token: ${{ secrets.OC_TOKEN }}
         overwrite: yes
-        file: frontend/openshift.deploy.yml
         parameters:
           -p MIN_REPLICAS=1 -p MAX_REPLICAS=2
           -p PR_NUMBER=${{ github.event.number }}
@@ -85,37 +85,38 @@ Deploy multiple templates in parallel.  This time penetration tests are enabled.
 deploys:
 name: Deploys
 runs-on: ubuntu-latest
-  matrix:
-  name: [backend, database, frontend, init]
-  include:
-    - name: backend
-      file: backend/openshift.deploy.yml
-      overwrite: true
-      parameters: -p MIN_REPLICAS=1 -p MAX_REPLICAS=2
-    - name: database
-      overwrite: false
-      file: database/openshift.deploy.yml
-    - name: frontend
-      overwrite: true
-      file: frontend/openshift.deploy.yml
-      parameters: -p MIN_REPLICAS=1 -p MAX_REPLICAS=2
-    - name: init
-      overwrite: false
-      file: common/openshift.init.yml
+  strategy:
+    matrix:
+    name: [backend, database, frontend, init]
+    include:
+      - name: backend
+        file: backend/openshift.deploy.yml
+        overwrite: true
+        parameters: -p MIN_REPLICAS=1 -p MAX_REPLICAS=2
+      - name: database
+        overwrite: false
+        file: database/openshift.deploy.yml
+      - name: frontend
+        overwrite: true
+        file: frontend/openshift.deploy.yml
+        parameters: -p MIN_REPLICAS=1 -p MAX_REPLICAS=2
+      - name: init
+        overwrite: false
+        file: common/openshift.init.yml
 steps:
   - uses: actions/checkout@v3
   - name: Deploys
     uses: bcgov-nr/action-deployer-openshift.yml@main
     with:
+      file: ${{ matrix.file }}
       oc_namespace: ${{ secrets.OC_NAMESPACE }}
       oc_server: ${{ secrets.OC_SERVER }}
       oc_token: ${{ secrets.OC_TOKEN }}
       overwrite: ${{ matrix.overwrite }}
-      penetration_test: true
-      file: ${{ matrix.file }}
       parameters:
         -p COMMON_TEMPLATE_VAR=whatever-${{ github.event.number }}
         ${{ matrix.parameters }}
+      penetration_test: true
 ```
 
 # Route Verification vs Penetration Testing

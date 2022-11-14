@@ -7,39 +7,18 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-jobs:
-  builds-retags:
-    name: Builds
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        package: [backend, database]
-        include:
-          - package: backend
-            triggers: ('backend/')
-          - package: database
-            triggers: ('database/')
-    steps:
-      - uses: actions/checkout@v3
-      - uses: bcgov-nr/action-conditional-container-builder@v0.0.2
-        with:
-          package: ${{ matrix.package }}
-          tag: ${{ github.event.number }}
-          tag_fallback: test
-          repository: bcgov/nr-quickstart-typescript
-          token: ${{ secrets.GITHUB_TOKEN }}
-          triggers: ${{ matrix.triggers }}
+env:
+  repo_builds: bcgov/nr-quickstart-typescript
 
+jobs:
   deploys:
     name: Deploys
-    needs:
-      - builds-retags
     runs-on: ubuntu-latest
     permissions:
       packages: read
     strategy:
       matrix:
-        name: [backend, database, init]
+        name: [backend, database, frontend, init]
         include:
           - name: backend
             file: backend/openshift.deploy.yml
@@ -48,6 +27,10 @@ jobs:
           - name: database
             file: database/openshift.deploy.yml
             overwrite: false
+          - name: frontend
+            file: frontend/openshift.deploy.yml
+            overwrite: true
+            parameters: -p MIN_REPLICAS=1 -p MAX_REPLICAS=2
           - name: init
             file: common/openshift.init.yml
             overwrite: false
@@ -64,6 +47,6 @@ jobs:
           penetration_test: true
           parameters:
             -p ZONE=${{ github.event.number }} -p NAME=${{ github.event.repository.name }}
-            -p PROMOTE=${{ github.repository }}/${{ matrix.name }}:${{ github.event.number }}
+            -p PROMOTE=${{ env.repo_builds }}/${{ matrix.name }}:test
             ${{ matrix.parameters }}
-          repository: bcgov/nr-quickstart-typescript
+          repository: ${{ env.repo_builds }}

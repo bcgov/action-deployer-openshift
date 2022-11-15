@@ -53,8 +53,15 @@ runs:
         oc login --token=${{ inputs.oc_token }} --server=${{ inputs.oc_server }}
         oc project ${{ inputs.oc_namespace }}
 
+        # Bug - OpenShift hates images with capitals in org/repo names
+        PARAMETERS="${{ inputs.parameters }}"
+        REPO_LOW=$( echo ${{ inputs.repository }} | tr '[:upper:]' '[:lower:]' )
+        if [ "${{ inputs.repository }}" != "${REPO_LOW}" ]; then
+          PARAMETERS=$( echo ${{ inputs.parameters }} | sed "s ${{ inputs.repository }} ${REPO_LOW} ")
+        fi
+
         # Process template, consuming variables/parameters
-        TEMPLATE=$(oc process -f ${{ inputs.file }} ${{ inputs.parameters }} --local)
+        TEMPLATE=$(oc process -f ${{ inputs.file }} ${PARAMETERS} --local)
 
         # ImageStream and DeploymentConfig names
         IS=$(jq -rn "${TEMPLATE} | .items[] | select(.kind==\"ImageStream\") | .metadata.name")

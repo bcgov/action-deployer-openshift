@@ -53,7 +53,7 @@ runs:
         oc login --token=${{ inputs.oc_token }} --server=${{ inputs.oc_server }}
         oc project ${{ inputs.oc_namespace }}
 
-        # Bug - Docker hates org/repo names with capitals
+        # Bug - OpenShift hates images with capitals in org/repo names
         PARAMETERS="${{ inputs.parameters }}"
         REPO_LOW=$( echo ${{ inputs.repository }} | tr '[:upper:]' '[:lower:]' )
         if [ "${{ inputs.repository }}" != "${REPO_LOW}" ]; then

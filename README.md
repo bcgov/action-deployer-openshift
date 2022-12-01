@@ -75,7 +75,7 @@ deploys:
         oc_namespace: ${{ secrets.OC_NAMESPACE }}
         oc_server: ${{ secrets.OC_SERVER }}
         oc_token: ${{ secrets.OC_TOKEN }}
-        overwrite: yes
+        overwrite: true
         parameters:
           -p MIN_REPLICAS=1 -p MAX_REPLICAS=2
           -p PR_NUMBER=${{ github.event.number }}

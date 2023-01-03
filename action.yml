@@ -30,11 +30,17 @@ inputs:
   penetration_test_fail:
     description: Allow ZAProxy alerts to fail the workflow? [true/false]
     default: "false"
+  healthcheck:
+    description: Allow the healthcheck endpoint to be used for validation
+    default: "false"  
 
   ### Usually a bad idea / not recommended
   repository:
     default: ${{ github.repository }}
     description: Optionally, specify a different repo to clone
+  health_url:
+    description: Sets the health endpoint for a non-standard
+    default: "/health"
 
 runs:
   using: composite
@@ -104,6 +110,11 @@ runs:
       run: |
         # Curl URL and verify http code 200
         URL="${{ steps.get-route.outputs.route }}"
+        
+        if [ "${{ inputs.healthcheck }}" == "true" ]; then
+          URL=$URL${{ inputs.health_url }}
+        fi
+
         echo -e "\n${URL}"
         # Curl and verify, max 3 attempts
         for (( i=0; i<3; i++ )); do

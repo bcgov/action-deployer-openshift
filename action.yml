@@ -30,14 +30,15 @@ inputs:
   penetration_test_fail:
     description: Allow ZAProxy alerts to fail the workflow? [true/false]
     default: "false"  
+  health_url:
+    description: Sets the health endpoint to be used during check stage
+    default: ""
 
   ### Usually a bad idea / not recommended
   repository:
     default: ${{ github.repository }}
     description: Optionally, specify a different repo to clone
-  health_url:
-    description: Sets the health endpoint to be used during check stage
-    default: ""
+  
 
 runs:
   using: composite

@@ -50,8 +50,9 @@ Testing has only been done with public containers on ghcr.io (GitHub Container R
     # Allow ZAProxy alerts to fail the workflow? [true/false]
     penetration_test_fail: false
 
-    # Sets the health endpoint to be used during check stage, does not require the '/' at the begining
-    health_url: ""
+    # Sets the health path to be used during deployment verification, does not require the '/' at the begining
+    # Builds a health verification URL, form: <route_via_template>/<verifidation_path>
+    verification_path: ""
 
 
     ### Usually a bad idea / not recommended
@@ -144,7 +145,7 @@ deploys:
         oc_server: ${{ secrets.OC_SERVER }}
         oc_token: ${{ secrets.OC_TOKEN }}
         overwrite: true
-        health_url: health
+        verification_url: health
         parameters:
           -p MIN_REPLICAS=1 -p MAX_REPLICAS=2
           -p PR_NUMBER=${{ github.event.number }}

@@ -63,22 +63,20 @@ runs:
         PARAMETERS=$( echo ${{ inputs.parameters }} | sed "s ${{ inputs.repository }} ${REPO_LOWERCASE} ")
 
         # Process template, consuming variables/parameters
-        TEMPLATE=$(oc process -f ${{ inputs.file }} ${PARAMETERS} --local)
+        TEMPLATE="$(oc process -f ${{ inputs.file }} ${PARAMETERS} --local)"
 
-        # ImageStream and DeploymentConfig names from template
-        IS=$(jq -rn "${TEMPLATE} | .items[] | select(.kind==\"ImageStream\") | .metadata.name")
-        DC=$(jq -rn "${TEMPLATE} | .items[] | select(.kind==\"DeploymentConfig\") | .metadata.name")
+        # ImageStream, DeploymentConfig, Route Host and Route Path from template
+        DC=$(jq -rn "${TEMPLATE} | .items[] | select(.kind==\"DeploymentConfig\").metadata.name //empty")
+        IS=$(jq -rn "${TEMPLATE} | .items[] | select(.kind==\"ImageStream\").metadata.name //empty")
+        ROUTE_HOST=$(jq -rn "${TEMPLATE} | .items[] | select(.kind==\"Route\").spec.host //empty")
+        ROUTE_PATH=$(jq -rn "${TEMPLATE} | .items[] | select(.kind==\"Route\").spec.host //empty")
 
-        # Route and path
-        ROUTE_HOST=$(oc process -f ${{ inputs.file }} ${{ inputs.parameters }} --local \
-            | jq -r '.items[] | select(.kind=="Route") | .spec | .host')
-        ROUTE_PATH=$(oc process -f ${{ inputs.file }} ${{ inputs.parameters }} --local \
-            | jq -r '.items[] | select(.kind=="Route") | .spec | .path')
-        URL="${ROUTE_HOST}/${ROUTE_PATH}"
+        # Build URL from route and path, but only if ROUTE_HOST is populated
+        [ -z "${ROUTE_HOST}" ]|| URL="${ROUTE_HOST}/${ROUTE_PATH}"
 
-        echo template=${TEMPLATE} >> $GITHUB_OUTPUT
         echo imageStream=${IS} >> $GITHUB_OUTPUT
         echo deploymentConfig=${DC} >> $GITHUB_OUTPUT
+        echo template=${TEMPLATE} >> $GITHUB_OUTPUT
         echo url=${URL} >> $GITHUB_OUTPUT
 
     - name: Deploy
@@ -91,12 +89,12 @@ runs:
         oc login --token=${{ inputs.oc_token }} --server=${{ inputs.oc_server }}
         oc project ${{ inputs.oc_namespace }}
 
-        # Clean previous images
+        # Clean previous image, if any
         IS=${{ steps.vars.outputs.imageStream }}
-        [ -z "${IS}" ]|| oc delete is/${IS} || true
+        [ ! $(oc get is -o name | grep ^imagestream.image.openshift.io/${IS}$) ]|| oc delete is/${IS}
 
         # Apply (overwrites) or create (does not overwrite) using processed template
-        TEMPLATE=${{ steps.vars.outputs.template }}
+        TEMPLATE="$( echo ${{ toJSON(steps.vars.outputs.template) }})"
         if [ "${{ inputs.overwrite }}" == "true" ]; then
           oc apply -f - <<< "${TEMPLATE}"
         else
@@ -146,6 +144,7 @@ runs:
         fail_action: ${{ inputs.penetration_test_fail }}
         allow_issue_writing: false
 
+    # Action repo needs to be present for cleanup/tests
     - name: Checkout to make sure action.yml is present (tests)
       if: ${{ github.repository }} != ${{ inputs.repository }}
       uses: actions/checkout@v3

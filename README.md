@@ -50,6 +50,9 @@ Testing has only been done with public containers on ghcr.io (GitHub Container R
     # Allow ZAProxy alerts to fail the workflow? [true/false]
     penetration_test_fail: false
 
+    # Sets the health endpoint to be used during check stage, does not require the '/' at the begining
+    health_url: ""
+
 
     ### Usually a bad idea / not recommended
 
@@ -121,6 +124,30 @@ steps:
         -p COMMON_TEMPLATE_VAR=whatever-${{ github.event.number }}
         ${{ matrix.parameters }}
       penetration_test: true
+```
+
+# Example, Using a different endpoint for deployment check
+
+Deploy a template and set the after deployment check to hit the **/health** endpoint.  Multiple GitHub secrets are used.
+
+```yaml
+deploys:
+  name: Deploys
+  runs-on: ubuntu-latest
+  steps:
+    - uses: actions/checkout@v3
+    - name: Deploys
+      uses: bcgov-nr/action-deployer-openshift.yml@main
+      with:
+        file: backend/openshift.deploy.yml
+        oc_namespace: ${{ secrets.OC_NAMESPACE }}
+        oc_server: ${{ secrets.OC_SERVER }}
+        oc_token: ${{ secrets.OC_TOKEN }}
+        overwrite: true
+        health_url: health
+        parameters:
+          -p MIN_REPLICAS=1 -p MAX_REPLICAS=2
+          -p PR_NUMBER=${{ github.event.number }}
 ```
 
 # Route Verification vs Penetration Testing

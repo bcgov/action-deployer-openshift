@@ -31,7 +31,7 @@ inputs:
     description: Allow ZAProxy alerts to fail the workflow? [true/false]
     default: "false"  
   health_url:
-    description: Sets the health endpoint to be used during check stage
+    description: Sets the health endpoint to be used during check stage, does not require the '/' at the begining
     default: ""
 
   ### Usually a bad idea / not recommended

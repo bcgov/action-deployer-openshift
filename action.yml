@@ -58,12 +58,8 @@ runs:
       run: |
         # Inputs and variables
 
-        # Bug - OpenShift hates images with capitals in org/repo names
-        REPO_LOWERCASE=$( echo ${{ inputs.repository }} | tr '[:upper:]' '[:lower:]' )
-        PARAMETERS=$( echo ${{ inputs.parameters }} | sed "s ${{ inputs.repository }} ${REPO_LOWERCASE} ")
-
         # Process template, consuming variables/parameters
-        TEMPLATE="$(oc process -f ${{ inputs.file }} ${PARAMETERS} --local)"
+        TEMPLATE="$(oc process -f ${{ inputs.file }} ${{ inputs.parameters }} --local)"
 
         # ImageStream, DeploymentConfig and Route Host from template
         DC=$(jq -rn "${TEMPLATE} | .items[] | select(.kind==\"DeploymentConfig\").metadata.name //empty")
@@ -78,7 +74,6 @@ runs:
 
         echo imageStream=${IS} >> $GITHUB_OUTPUT
         echo deploymentConfig=${DC} >> $GITHUB_OUTPUT
-        echo template=${TEMPLATE} >> $GITHUB_OUTPUT
         echo url=${URL} >> $GITHUB_OUTPUT
 
     - name: Deploy
@@ -95,8 +90,12 @@ runs:
         IS=${{ steps.vars.outputs.imageStream }}
         [ ! $(oc get is -o name | grep ^imagestream.image.openshift.io/${IS}$) ]|| oc delete is/${IS}
 
+        # Bug - OpenShift hates images with capitals in org/repo names
+        REPO_LOWERCASE=$( echo ${{ inputs.repository }} | tr '[:upper:]' '[:lower:]' )
+        PARAMETERS=$( echo ${{ inputs.parameters }} | sed "s ${{ inputs.repository }} ${REPO_LOWERCASE} ")
+
         # Apply (overwrites) or create (does not overwrite) using processed template
-        TEMPLATE="$( echo ${{ toJSON(steps.vars.outputs.template) }})"
+        TEMPLATE="$(oc process -f ${{ inputs.file }} ${PARAMETERS} --local)"
         if [ "${{ inputs.overwrite }}" == "true" ]; then
           oc apply -f - <<< "${TEMPLATE}"
         else

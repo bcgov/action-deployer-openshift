@@ -29,16 +29,21 @@ inputs:
     description: Run a ZAProxy penetration test against any routes? [true/false]
   penetration_test_fail:
     description: Allow ZAProxy alerts to fail the workflow? [true/false]
-    default: "false"  
-  health_url:
+    default: "false"
+  verification_path:
     description: Sets the health endpoint to be used during check stage, does not require the '/' at the begining
     default: ""
+  verification_retry_attempts:
+    description: Number of times to attempt deployment verification
+    default: "3"
+  verification_retry_seconds:
+    description: Seconds to wait between deployment verification attempts
+    default: "10"
 
   ### Usually a bad idea / not recommended
   repository:
     default: ${{ github.repository }}
     description: Optionally, specify a different repo to clone
-  
 
 runs:
   using: composite
@@ -47,34 +52,51 @@ runs:
       with:
         repository: ${{ inputs.repository }}
 
+    # Process variables and inputs
+    - id: vars
+      shell: bash
+      run: |
+        # Inputs and variables
+
+        # Bug - OpenShift hates images with capitals in org/repo names
+        REPO_LOWERCASE=$( echo ${{ inputs.repository }} | tr '[:upper:]' '[:lower:]' )
+        PARAMETERS=$( echo ${{ inputs.parameters }} | sed "s ${{ inputs.repository }} ${REPO_LOWERCASE} ")
+
+        # Process template, consuming variables/parameters
+        TEMPLATE="$(oc process -f ${{ inputs.file }} ${PARAMETERS} --local)"
+
+        # ImageStream, DeploymentConfig and Route Host from template
+        DC=$(jq -rn "${TEMPLATE} | .items[] | select(.kind==\"DeploymentConfig\").metadata.name //empty")
+        IS=$(jq -rn "${TEMPLATE} | .items[] | select(.kind==\"ImageStream\").metadata.name //empty")
+        ROUTE_HOST=$(jq -rn "${TEMPLATE} | .items[] | select(.kind==\"Route\").spec.host //empty")
+
+        # Route path from inputs or template (inputs.verification_path takes priority)
+        ROUTE_PATH=${{ inputs.verification_path }}||$(jq -rn "${TEMPLATE} | .items[] | select(.kind==\"Route\").spec.host //empty")
+
+        # Build URL from route and path, but only if ROUTE_HOST is populated
+        [ -z "${ROUTE_HOST}" ]|| URL="${ROUTE_HOST}/${ROUTE_PATH}"
+
+        echo imageStream=${IS} >> $GITHUB_OUTPUT
+        echo deploymentConfig=${DC} >> $GITHUB_OUTPUT
+        echo template=${TEMPLATE} >> $GITHUB_OUTPUT
+        echo url=${URL} >> $GITHUB_OUTPUT
+
     - name: Deploy
       shell: bash
       run: |
-        # Allow pipefail, since we will be catching oc create errors
+        # Allow pipefail, since we could be catching oc create errors
         set +o pipefail
 
         # Login to OpenShift (NOTE: project command is a safeguard)
         oc login --token=${{ inputs.oc_token }} --server=${{ inputs.oc_server }}
         oc project ${{ inputs.oc_namespace }}
 
-        # Bug - OpenShift hates images with capitals in org/repo names
-        PARAMETERS="${{ inputs.parameters }}"
-        REPO_LOW=$( echo ${{ inputs.repository }} | tr '[:upper:]' '[:lower:]' )
-        if [ "${{ inputs.repository }}" != "${REPO_LOW}" ]; then
-          PARAMETERS=$( echo ${{ inputs.parameters }} | sed "s ${{ inputs.repository }} ${REPO_LOW} ")
-        fi
-
-        # Process template, consuming variables/parameters
-        TEMPLATE=$(oc process -f ${{ inputs.file }} ${PARAMETERS} --local)
-
-        # ImageStream and DeploymentConfig names
-        IS=$(jq -rn "${TEMPLATE} | .items[] | select(.kind==\"ImageStream\") | .metadata.name")
-        DC=$(jq -rn "${TEMPLATE} | .items[] | select(.kind==\"DeploymentConfig\") | .metadata.name")
-
-        # Clean previous images
-        [ -z "${IS}" ]|| oc delete is/${IS} || true
+        # Clean previous image, if any
+        IS=${{ steps.vars.outputs.imageStream }}
+        [ ! $(oc get is -o name | grep ^imagestream.image.openshift.io/${IS}$) ]|| oc delete is/${IS}
 
         # Apply (overwrites) or create (does not overwrite) using processed template
+        TEMPLATE="$( echo ${{ toJSON(steps.vars.outputs.template) }})"
         if [ "${{ inputs.overwrite }}" == "true" ]; then
           oc apply -f - <<< "${TEMPLATE}"
         else
@@ -83,42 +105,34 @@ runs:
         fi
 
         # Follow any active rollouts (see deploymentconfigs)
+        DC=${{ steps.vars.outputs.deploymentConfig }}
         [ -z "${DC}" ]|| oc rollout status dc/${DC} -w
-
-    - name: Find Routes
-      id: get-route
-      shell: bash
-      run: |
-        # Pick out a url (host+path), if in template
-        URL=$( \
-          oc process -f ${{ inputs.file }} ${{ inputs.parameters }} --local \
-            | jq -r '.items[] | select(.kind=="Route") | .spec | .host + "/" +.path' \
-        )
-        # If URL exists and is usable (e.g. at least a hostname), then save it
-        if [ ! -z "${URL%/*}" ]; then
-          echo "route=${URL}" >> $GITHUB_OUTPUT
-          echo "Route: ${{ steps.get-route.outputs.route }}"
-          exit 0
-        fi
-        echo "No routes found"
 
     - name: Route Verification
       if: steps.get-route.outputs.route &&( inputs.penetration_test != 'true' )
       shell: bash
       run: |
-        # Curl URL and verify http code 200
-        URL="${{ steps.get-route.outputs.route }}${{ inputs.health_url }}"
-        
-        echo -e "\n${URL}"
-        # Curl and verify, max 3 attempts
-        for (( i=0; i<3; i++ )); do
+        # Route verification
+
+        # Check for URL (route + path)
+        URL=${{ steps.vars.outputs.url }}
+        if [ -z "${URL}" ]; then
+          echo -e "\nNo route found. Skipping."
+          exit 0
+        fi
+        echo -e "\nURL:${URL}"
+
+        # Curl and verify
+        TRIES="${{ inputs.verification_retry_attempts }}"
+        SECONDS="${{ inputs.verification_retry_seconds }}"
+        for (( i=0; i<"${TRIES}"; i++ )); do
           HTTP_CODE=$(curl -Lso /dev/null -w "%{http_code}" "${URL}")
           if [ "${HTTP_CODE}" -eq 200 ]; then
             echo -e "Deployment successful!"
-            exit
+            exit 0
           fi
           echo -e "HTTP_CODE:${HTTP_CODE}, Try: #${i}"
-          sleep 10
+          sleep "${SECONDS}"
         done
         echo -e "\nRoute verification failed"
         exit 1
@@ -132,5 +146,7 @@ runs:
         fail_action: ${{ inputs.penetration_test_fail }}
         allow_issue_writing: false
 
+    # Action repo needs to be present for cleanup/tests
     - name: Checkout to make sure action.yml is present (tests)
+      if: ${{ github.repository }} != ${{ inputs.repository }}
       uses: actions/checkout@v3

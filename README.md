@@ -54,6 +54,12 @@ Testing has only been done with public containers on ghcr.io (GitHub Container R
     # Builds a health verification URL, form: <route_via_template>/<verifidation_path>
     verification_path: ""
 
+    # Number of times to attempt deployment verification
+    verification_retry_attempts: "3"
+
+    # Seconds to wait between deployment verification attempts
+    verification_retry_seconds: "10"
+
 
     ### Usually a bad idea / not recommended
 

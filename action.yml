@@ -65,11 +65,13 @@ runs:
         # Process template, consuming variables/parameters
         TEMPLATE="$(oc process -f ${{ inputs.file }} ${PARAMETERS} --local)"
 
-        # ImageStream, DeploymentConfig, Route Host and Route Path from template
+        # ImageStream, DeploymentConfig and Route Host from template
         DC=$(jq -rn "${TEMPLATE} | .items[] | select(.kind==\"DeploymentConfig\").metadata.name //empty")
         IS=$(jq -rn "${TEMPLATE} | .items[] | select(.kind==\"ImageStream\").metadata.name //empty")
         ROUTE_HOST=$(jq -rn "${TEMPLATE} | .items[] | select(.kind==\"Route\").spec.host //empty")
-        ROUTE_PATH=$(jq -rn "${TEMPLATE} | .items[] | select(.kind==\"Route\").spec.host //empty")
+
+        # Route path from inputs or template (inputs.verification_path takes priority)
+        ROUTE_PATH=${{ inputs.verification_path }}||$(jq -rn "${TEMPLATE} | .items[] | select(.kind==\"Route\").spec.host //empty")
 
         # Build URL from route and path, but only if ROUTE_HOST is populated
         [ -z "${ROUTE_HOST}" ]|| URL="${ROUTE_HOST}/${ROUTE_PATH}"

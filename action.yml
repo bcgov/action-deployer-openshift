@@ -108,7 +108,7 @@ runs:
         [ -z "${DC}" ]|| oc rollout status dc/${DC} -w
 
     - name: Route Verification
-      if: steps.get-route.outputs.route &&( inputs.penetration_test != 'true' )
+      if: steps.vars.outputs.url &&( inputs.penetration_test != 'true' )
       shell: bash
       run: |
         # Route verification
@@ -137,10 +137,10 @@ runs:
         exit 1
 
     - name: Penetration Test
-      if: steps.get-route.outputs.route &&( inputs.penetration_test == 'true' )
+      if: steps.vars.outputs.url &&( inputs.penetration_test == 'true' )
       uses: zaproxy/action-full-scan@v0.4.0
       with:
-        target: https://${{ steps.get-route.outputs.route }}
+        target: https://${{ steps.vars.outputs.url }}
         cmd_options: "-a"
         fail_action: ${{ inputs.penetration_test_fail }}
         allow_issue_writing: false

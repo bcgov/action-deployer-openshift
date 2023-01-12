@@ -74,7 +74,9 @@ runs:
 
         echo imageStream=${IS} >> $GITHUB_OUTPUT
         echo deploymentConfig=${DC} >> $GITHUB_OUTPUT
-        echo url=${URL} >> $GITHUB_OUTPUT
+
+        # Removes any double slashles, e.g. inputs.verification_path
+        echo url=${URL} | sed 's // / g' >> $GITHUB_OUTPUT
 
     - name: Deploy
       shell: bash

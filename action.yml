@@ -69,7 +69,7 @@ runs:
         # Route path from inputs or template (inputs.verification_path takes priority)
         ROUTE_PATH=${{ inputs.verification_path }}
         [ ! -z "${ROUTE_PATH}" ]|| \
-          ROUTE_PATH=$(jq -rn "${TEMPLATE} | .items[] | select(.kind==\"Route\").spec.host //empty")
+          ROUTE_PATH=$(jq -rn "${TEMPLATE} | .items[] | select(.kind==\"Route\").spec.path //empty")
 
         # Build URL from route and path, but only if ROUTE_HOST is populated
         [ -z "${ROUTE_HOST}" ]|| URL="${ROUTE_HOST}/${ROUTE_PATH}"

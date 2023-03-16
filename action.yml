@@ -58,6 +58,14 @@ runs:
       run: |
         # Inputs and variables
 
+        # Bug - OpenShift hates images with capitals in org/repo names
+        REPO=${{ inputs.repository }}
+        if [[ $o != ${o,,} ]]; then 
+          echo -e "An OpenShift bug prevents capital letters in repo names.\n"
+          echo -e "Please handle that using the `repository` parameter.\n"
+          exit 1
+        fi
+
         # Process template, consuming variables/parameters
         TEMPLATE="$(oc process -f ${{ inputs.file }} ${{ inputs.parameters }} --local)"
 
@@ -94,12 +102,8 @@ runs:
         IS=${{ steps.vars.outputs.imageStream }}
         [ ! $(oc get is -o name | grep ^imagestream.image.openshift.io/${IS}$) ]|| oc delete is/${IS}
 
-        # Bug - OpenShift hates images with capitals in org/repo names
-        REPO_LOWERCASE=$( echo ${{ inputs.repository }} | tr '[:upper:]' '[:lower:]' )
-        PARAMETERS=$( echo ${{ inputs.parameters }} | sed "s ${{ inputs.repository }} ${REPO_LOWERCASE} ")
-
         # Apply (overwrites) or create (does not overwrite) using processed template
-        TEMPLATE="$(oc process -f ${{ inputs.file }} ${PARAMETERS} --local)"
+        TEMPLATE="$(oc process -f ${{ inputs.file }} ${{ inputs.parameters }} --local)"
         if [ "${{ inputs.overwrite }}" == "true" ]; then
           oc apply -f - <<< "${TEMPLATE}"
         else

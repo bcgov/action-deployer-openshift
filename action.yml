@@ -99,8 +99,11 @@ runs:
         oc project ${{ inputs.oc_namespace }}
 
         # Clean previous image, if any
-        IS=${{ steps.vars.outputs.imageStream }}
-        [ ! $(oc get is -o name | grep ^imagestream.image.openshift.io/${IS}$) ]|| oc delete is/${IS}
+        IS="${{ steps.vars.outputs.imageStream }}"
+        for i in "${IS}"
+        do
+          [ ! $(oc get is -o name | grep ^imagestream.image.openshift.io/${i}$) ]|| oc delete is/${i}
+        done
 
         # Apply (overwrites) or create (does not overwrite) using processed template
         TEMPLATE="$(oc process -f ${{ inputs.file }} ${{ inputs.parameters }} --local)"

@@ -99,8 +99,8 @@ runs:
         oc project ${{ inputs.oc_namespace }}
 
         # Clean previous image, if any
-        IS="${{ steps.vars.outputs.imageStream }}"
-        for i in "${IS}"
+        IFS=" " read -ra IS <<< "${{ steps.vars.outputs.imageStream }}"
+        for i in "${IS[@]}"
         do
           [ ! $(oc get is -o name | grep ^imagestream.image.openshift.io/${i}$) ]|| oc delete is/${i}
         done

@@ -80,13 +80,13 @@ runs:
           ROUTE_PATH=$(jq -rn "${TEMPLATE} | .items[] | select(.kind==\"Route\").spec.path //empty")
 
         # Build URL from route and path, but only if ROUTE_HOST is populated
-        [ -z "${ROUTE_HOST}" ]|| URL="${ROUTE_HOST}/${ROUTE_PATH}"
+        [ -z "${ROUTE_HOST}" ]|| URL_HOST_PATH="${ROUTE_HOST}/${ROUTE_PATH}"
 
         echo imageStream=${IS} >> $GITHUB_OUTPUT
         echo deploymentConfig=${DC} >> $GITHUB_OUTPUT
 
         # Removes any double slashles, e.g. inputs.verification_path
-        echo url=${URL} | sed 's // / g' >> $GITHUB_OUTPUT
+        echo url=${URL_HOST_PATH} | sed 's // / g' >> $GITHUB_OUTPUT
 
     - name: Deploy
       shell: bash
@@ -125,18 +125,18 @@ runs:
         # Route verification
 
         # Check for URL (route + path)
-        URL=${{ steps.vars.outputs.url }}
-        if [ -z "${URL}" ]; then
+        URL_HOST_PATH=${{ steps.vars.outputs.url }}
+        if [ -z "${URL_HOST_PATH}" ]; then
           echo -e "\nNo route found. Skipping."
           exit 0
         fi
-        echo -e "\nURL:${URL}"
+        echo -e "\nURL: ${URL_HOST_PATH}"
 
         # Curl and verify
         TRIES="${{ inputs.verification_retry_attempts }}"
         SECONDS="${{ inputs.verification_retry_seconds }}"
         for (( i=0; i<"${TRIES}"; i++ )); do
-          HTTP_CODE=$(curl -Lso /dev/null -w "%{http_code}" "${URL}")
+          HTTP_CODE=$(curl -Lso /dev/null -w "%{http_code}" "${URL_HOST_PATH}")
           if [ "${HTTP_CODE}" -eq 200 ]; then
             echo -e "Deployment successful!"
             exit 0

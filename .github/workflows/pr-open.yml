@@ -8,7 +8,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  repo_builds: bcgov/nr-quickstart-typescript
+  repo_builds: bcgov/quickstart-openshift
 
 jobs:
   deploys:

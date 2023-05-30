@@ -30,6 +30,9 @@ inputs:
   penetration_test_fail:
     description: Allow ZAProxy alerts to fail the workflow? [true/false]
     default: "false"
+  triggers:
+    description: Paths used to trigger a deployment; e.g. ('./backend/', './frontend/)
+    default: "."
   verification_path:
     description: Sets the health endpoint to be used during check stage, does not require the '/' at the begining
     default: ""
@@ -41,6 +44,9 @@ inputs:
     default: "10"
 
   ### Usually a bad idea / not recommended
+  diff_branch:
+    default: ${{ github.event.repository.default_branch }}
+    description: Branch to diff against
   repository:
     default: ${{ github.repository }}
     description: Optionally, specify a different repo to clone
@@ -88,7 +94,23 @@ runs:
         # Removes any double slashles, e.g. inputs.verification_path
         echo url=${URL_HOST_PATH} | sed 's // / g' >> $GITHUB_OUTPUT
 
+        # Triggers
+        TRIGGERS=${{ inputs.triggers }}
+        git fetch origin "${{ inputs.diff_branch }}"
+        while read -r check; do
+          for t in "${TRIGGERS[@]}"; do
+            if [[ "${check}" =~ "${t}" ]]; then
+                echo -e "Triggered: ${t}\n --> ${check}"
+                echo "triggered=true" >> $GITHUB_OUTPUT
+                exit 0
+            fi
+          done
+        done < <(git diff origin/"${{ inputs.diff_branch }}" --name-only)
+
+        echo "Triggers not matched, deployment skipped"
+
     - name: Deploy
+      if: steps.vars.outputs.triggered
       shell: bash
       run: |
         # Allow pipefail, since we could be catching oc create errors
@@ -119,7 +141,7 @@ runs:
         [ -z "${DC}" ]|| oc rollout status dc/${DC} -w
 
     - name: Route Verification
-      if: steps.vars.outputs.url &&( inputs.penetration_test != 'true' )
+      if: steps.vars.outputs.url && steps.vars.outputs.triggered &&( inputs.penetration_test != 'true' )
       shell: bash
       run: |
         # Route verification
@@ -127,10 +149,10 @@ runs:
         # Check for URL (route + path)
         URL_HOST_PATH=${{ steps.vars.outputs.url }}
         if [ -z "${URL_HOST_PATH}" ]; then
-          echo -e "\nNo route found. Skipping."
+          echo "No route found. Skipping."
           exit 0
         fi
-        echo -e "\nURL: ${URL_HOST_PATH}"
+        echo -e "URL: ${URL_HOST_PATH}"
 
         # Curl and verify
         TRIES="${{ inputs.verification_retry_attempts }}"
@@ -138,7 +160,7 @@ runs:
         for (( i=0; i<"${TRIES}"; i++ )); do
           HTTP_CODE=$(curl -Lso /dev/null -w "%{http_code}" "${URL_HOST_PATH}")
           if [ "${HTTP_CODE}" -eq 200 ]; then
-            echo -e "Deployment successful!"
+            echo -e "Route verification successful!\n"
             exit 0
           fi
           echo -e "HTTP_CODE:${HTTP_CODE}, Try: #${i}"
@@ -148,7 +170,7 @@ runs:
         exit 1
 
     - name: Penetration Test
-      if: steps.vars.outputs.url &&( inputs.penetration_test == 'true' )
+      if: steps.vars.outputs.url && steps.vars.outputs.triggered &&( inputs.penetration_test == 'true' )
       uses: zaproxy/action-full-scan@v0.4.0
       with:
         target: https://${{ steps.vars.outputs.url }}

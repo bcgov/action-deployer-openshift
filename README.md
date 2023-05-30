@@ -50,6 +50,10 @@ Testing has only been done with public containers on ghcr.io (GitHub Container R
     # Allow ZAProxy alerts to fail the workflow? [true/false]
     penetration_test_fail: false
 
+    # Bash array to diff for build triggering
+    # Optional, defaults to nothing, which forces a build
+    triggers: ('frontend/')
+    
     # Sets the health path to be used during deployment verification, does not require the '/' at the begining
     # Builds a health verification URL, form: <route_via_template>/<verifidation_path>
     verification_path: ""
@@ -62,6 +66,10 @@ Testing has only been done with public containers on ghcr.io (GitHub Container R
 
 
     ### Usually a bad idea / not recommended
+
+    # Overrides the default branch to diff against
+    # Defaults to the default branch, usually `main`
+    diff_branch: ${{ github.event.repository.default_branch }}
 
     # Repository to clone and process
     # Useful for consuming other repos, defaults to the current one
@@ -89,6 +97,7 @@ deploys:
         parameters:
           -p MIN_REPLICAS=1 -p MAX_REPLICAS=2
           -p PR_NUMBER=${{ github.event.number }}
+        triggers: ('frontend/')
 ```
 
 # Example, Matrix / Multiple Templates
@@ -107,6 +116,7 @@ runs-on: ubuntu-latest
         file: backend/openshift.deploy.yml
         overwrite: true
         parameters: -p MIN_REPLICAS=1 -p MAX_REPLICAS=2
+        triggers: ('backend/')
       - name: database
         overwrite: false
         file: database/openshift.deploy.yml
@@ -114,6 +124,7 @@ runs-on: ubuntu-latest
         overwrite: true
         file: frontend/openshift.deploy.yml
         parameters: -p MIN_REPLICAS=1 -p MAX_REPLICAS=2
+        triggers: ('backend/', 'frontend/')
       - name: init
         overwrite: false
         file: common/openshift.init.yml
@@ -131,6 +142,7 @@ steps:
         -p COMMON_TEMPLATE_VAR=whatever-${{ github.event.number }}
         ${{ matrix.parameters }}
       penetration_test: true
+      triggers: ${{ matrix.triggers }}
 ```
 
 # Example, Using a different endpoint for deployment check
@@ -155,6 +167,7 @@ deploys:
         parameters:
           -p MIN_REPLICAS=1 -p MAX_REPLICAS=2
           -p PR_NUMBER=${{ github.event.number }}
+        triggers: ${{ matrix.triggers }}
 ```
 
 # Route Verification vs Penetration Testing

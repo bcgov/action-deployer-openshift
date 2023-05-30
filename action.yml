@@ -111,7 +111,7 @@ runs:
         echo "triggered=false" >> $GITHUB_OUTPUT
 
     - name: Deploy
-      if: steps.vars.outputs.triggered
+      if: steps.vars.outputs.triggered == 'true'
       shell: bash
       run: |
         # Allow pipefail, since we could be catching oc create errors

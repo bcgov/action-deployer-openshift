@@ -44,6 +44,9 @@ inputs:
     default: "10"
 
   ### Usually a bad idea / not recommended
+  diff_branch:
+    default: ${{ github.event.repository.default_branch }}
+    description: Branch to diff against
   repository:
     default: ${{ github.repository }}
     description: Optionally, specify a different repo to clone
@@ -93,7 +96,7 @@ runs:
 
         # Triggers
         TRIGGERS=${{ inputs.triggers }}
-        git fetch origin "${{ github.event.repository.default_branch }}"
+        git fetch origin "${{ inputs.diff_branch }}"
         while read -r check; do
           for t in "${TRIGGERS[@]}"; do
             if [[ "${check}" =~ "${t}" ]]; then
@@ -102,7 +105,7 @@ runs:
                 exit 0
             fi
           done
-        done < <(git diff origin/"${{ github.event.repository.default_branch }}" --name-only)
+        done < <(git diff origin/"${{ inputs.diff_branch }}" --name-only)
 
         echo "Triggers not matched"
         echo "triggered=false" >> $GITHUB_OUTPUT

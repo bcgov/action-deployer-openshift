@@ -30,6 +30,9 @@ inputs:
   penetration_test_fail:
     description: Allow ZAProxy alerts to fail the workflow? [true/false]
     default: "false"
+  triggers:
+    description: Paths used to trigger a build; e.g. ('./backend/', './frontend/)
+    default: "."
   verification_path:
     description: Sets the health endpoint to be used during check stage, does not require the '/' at the begining
     default: ""
@@ -88,7 +91,24 @@ runs:
         # Removes any double slashles, e.g. inputs.verification_path
         echo url=${URL_HOST_PATH} | sed 's // / g' >> $GITHUB_OUTPUT
 
+        # Triggers
+        TRIGGERS=${{ inputs.triggers }}
+        git fetch origin "${{ github.event.repository.default_branch }}"
+        while read -r check; do
+          for t in "${TRIGGERS[@]}"; do
+            if [[ "${check}" =~ "${t}" ]]; then
+                echo -e "Triggered: ${t}\n --> ${check}"
+                echo "triggered=true" >> $GITHUB_OUTPUT
+                exit 0
+            fi
+          done
+        done < <(git diff origin/"${{ github.event.repository.default_branch }}" --name-only)
+
+        echo "Triggers not matched"
+        echo "triggered=false" >> $GITHUB_OUTPUT
+
     - name: Deploy
+      if: steps.vars.outputs.triggered
       shell: bash
       run: |
         # Allow pipefail, since we could be catching oc create errors
@@ -119,7 +139,7 @@ runs:
         [ -z "${DC}" ]|| oc rollout status dc/${DC} -w
 
     - name: Route Verification
-      if: steps.vars.outputs.url &&( inputs.penetration_test != 'true' )
+      if: steps.vars.outputs.url && steps.vars.outputs.triggered && inputs.penetration_test
       shell: bash
       run: |
         # Route verification
@@ -148,7 +168,7 @@ runs:
         exit 1
 
     - name: Penetration Test
-      if: steps.vars.outputs.url &&( inputs.penetration_test == 'true' )
+      if: steps.vars.outputs.url && steps.vars.outputs.triggered && inputs.penetration_test
       uses: zaproxy/action-full-scan@v0.4.0
       with:
         target: https://${{ steps.vars.outputs.url }}

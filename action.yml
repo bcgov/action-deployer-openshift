@@ -142,7 +142,7 @@ runs:
         [ -z "${DC}" ]|| oc rollout status dc/${DC} -w
 
     - name: Route Verification
-      if: steps.vars.outputs.url && steps.vars.outputs.triggered && inputs.penetration_test
+      if: steps.vars.outputs.url &&( inputs.penetration_test != 'true' )
       shell: bash
       run: |
         # Route verification
@@ -150,10 +150,10 @@ runs:
         # Check for URL (route + path)
         URL_HOST_PATH=${{ steps.vars.outputs.url }}
         if [ -z "${URL_HOST_PATH}" ]; then
-          echo -e "\nNo route found. Skipping."
+          echo "No route found. Skipping."
           exit 0
         fi
-        echo -e "\nURL: ${URL_HOST_PATH}"
+        echo -e "URL: ${URL_HOST_PATH}"
 
         # Curl and verify
         TRIES="${{ inputs.verification_retry_attempts }}"
@@ -161,7 +161,7 @@ runs:
         for (( i=0; i<"${TRIES}"; i++ )); do
           HTTP_CODE=$(curl -Lso /dev/null -w "%{http_code}" "${URL_HOST_PATH}")
           if [ "${HTTP_CODE}" -eq 200 ]; then
-            echo -e "Deployment successful!"
+            echo -e "Route verification successful!\n"
             exit 0
           fi
           echo -e "HTTP_CODE:${HTTP_CODE}, Try: #${i}"
@@ -171,7 +171,7 @@ runs:
         exit 1
 
     - name: Penetration Test
-      if: steps.vars.outputs.url && steps.vars.outputs.triggered && inputs.penetration_test
+      if: steps.vars.outputs.url &&( inputs.penetration_test == 'true' )
       uses: zaproxy/action-full-scan@v0.4.0
       with:
         target: https://${{ steps.vars.outputs.url }}

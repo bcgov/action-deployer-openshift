@@ -31,7 +31,7 @@ inputs:
     description: Allow ZAProxy alerts to fail the workflow? [true/false]
     default: "false"
   triggers:
-    description: Paths used to trigger a build; e.g. ('./backend/', './frontend/)
+    description: Paths used to trigger a deployment; e.g. ('./backend/', './frontend/)
     default: "."
   verification_path:
     description: Sets the health endpoint to be used during check stage, does not require the '/' at the begining
@@ -107,11 +107,10 @@ runs:
           done
         done < <(git diff origin/"${{ inputs.diff_branch }}" --name-only)
 
-        echo "Triggers not matched"
-        echo "triggered=false" >> $GITHUB_OUTPUT
+        echo "Triggers not matched, deployment not required"
 
     - name: Deploy
-      if: steps.vars.outputs.triggered == 'true'
+      if: steps.vars.outputs.triggered
       shell: bash
       run: |
         # Allow pipefail, since we could be catching oc create errors
@@ -142,7 +141,7 @@ runs:
         [ -z "${DC}" ]|| oc rollout status dc/${DC} -w
 
     - name: Route Verification
-      if: steps.vars.outputs.url &&( inputs.penetration_test != 'true' )&&( steps.vars.outputs.triggered == 'true' )
+      if: steps.vars.outputs.url && steps.vars.outputs.triggered &&( inputs.penetration_test != 'true' )
       shell: bash
       run: |
         # Route verification
@@ -171,7 +170,7 @@ runs:
         exit 1
 
     - name: Penetration Test
-      if: steps.vars.outputs.url &&( inputs.penetration_test == 'true' )&&( steps.vars.outputs.triggered == 'true' )
+      if: steps.vars.outputs.url && steps.vars.outputs.triggered &&( inputs.penetration_test == 'true' )
       uses: zaproxy/action-full-scan@v0.4.0
       with:
         target: https://${{ steps.vars.outputs.url }}

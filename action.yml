@@ -107,7 +107,7 @@ runs:
           done
         done < <(git diff origin/"${{ inputs.diff_branch }}" --name-only)
 
-        echo "Triggers not matched, deployment not required"
+        echo "Triggers not matched, deployment skipped"
 
     - name: Deploy
       if: steps.vars.outputs.triggered

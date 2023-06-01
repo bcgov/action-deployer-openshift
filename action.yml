@@ -31,8 +31,7 @@ inputs:
     description: Allow ZAProxy alerts to fail the workflow? [true/false]
     default: "false"
   triggers:
-    description: Paths used to trigger a deployment; e.g. ('./backend/', './frontend/)
-    default: "."
+    description: Omit to always build, otherwise trigger by path; e.g. ('./backend/', './frontend/)
   verification_path:
     description: Sets the health endpoint to be used during check stage, does not require the '/' at the begining
     default: ""
@@ -62,11 +61,11 @@ runs:
     - id: vars
       shell: bash
       run: |
-        # Inputs and variables
+        # Expand for inputs and variables
 
-        # Bug - OpenShift hates images with capitals in org/repo names
+        # Bug mitigation - OpenShift hates images with capitals in org/repo names
         REPO=${{ inputs.repository }}
-        if [[ $o != ${o,,} ]]; then 
+        if [[ $REPO != ${REPO,,} ]]; then
           echo -e "An OpenShift bug prevents capital letters in repo names.\n"
           echo -e "Please handle that using the `repository` parameter.\n"
           exit 1
@@ -95,24 +94,32 @@ runs:
         echo url=${URL_HOST_PATH} | sed 's // / g' >> $GITHUB_OUTPUT
 
         # Triggers
-        TRIGGERS=${{ inputs.triggers }}
-        git fetch origin "${{ inputs.diff_branch }}"
-        while read -r check; do
-          for t in "${TRIGGERS[@]}"; do
-            if [[ "${check}" =~ "${t}" ]]; then
-                echo -e "Triggered: ${t}\n --> ${check}"
-                echo "triggered=true" >> $GITHUB_OUTPUT
-                exit 0
-            fi
-          done
-        done < <(git diff origin/"${{ inputs.diff_branch }}" --name-only)
-
+        TRIGGERS="${{ inputs.triggers }}"
+        if [ -z "${TRIGGERS}" ]; then
+          echo "Triggers omitted, deployment required"
+          echo "triggered=true" >> $GITHUB_OUTPUT
+          exit 0
+        else
+          echo "Processing triggers"
+          git fetch origin "${{ inputs.diff_branch }}"
+          while read -r check; do
+            for t in "${TRIGGERS[@]}"; do
+              if [[ "${check}" =~ "${t}" ]]; then
+                  echo -e "Triggered: ${t}\n --> ${check}"
+                  echo "triggered=true" >> $GITHUB_OUTPUT
+                  exit 0
+              fi
+            done
+          done < <(git diff origin/"${{ inputs.diff_branch }}" --name-only)
+        fi
         echo "Triggers not matched, deployment skipped"
 
     - name: Deploy
       if: steps.vars.outputs.triggered
       shell: bash
       run: |
+        # Expand for deployment steps
+
         # Allow pipefail, since we could be catching oc create errors
         set +o pipefail
 
@@ -144,7 +151,7 @@ runs:
       if: steps.vars.outputs.url && steps.vars.outputs.triggered &&( inputs.penetration_test != 'true' )
       shell: bash
       run: |
-        # Route verification
+        # Expand for route verification
 
         # Check for URL (route + path)
         URL_HOST_PATH=${{ steps.vars.outputs.url }}

@@ -24,6 +24,7 @@ jobs:
             file: backend/openshift.deploy.yml
             overwrite: true
             parameters: -p MIN_REPLICAS=1 -p MAX_REPLICAS=2
+            triggers: ('backend/')
             verification_path: /
           - name: database
             file: database/openshift.deploy.yml
@@ -33,6 +34,7 @@ jobs:
             overwrite: true
             parameters: -p MIN_REPLICAS=1 -p MAX_REPLICAS=2
             penetration_test: true
+            triggers: ('frontend/')
           - name: init
             file: common/openshift.init.yml
             overwrite: false
@@ -52,4 +54,5 @@ jobs:
             -p PROMOTE=${{ env.repo_builds }}/${{ matrix.name }}:test
             ${{ matrix.parameters }}
           repository: ${{ env.repo_builds }}
+          triggers: ${{ matrix.triggers }}
           verification_path: ${{ matrix.verification_path }}

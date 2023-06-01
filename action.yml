@@ -94,22 +94,24 @@ runs:
         echo url=${URL_HOST_PATH} | sed 's // / g' >> $GITHUB_OUTPUT
 
         # Triggers
-        if [ -z ${{ inputs.triggers }} ]; then
+        TRIGGERS="${{ inputs.triggers }}"
+        if [ -z "${TRIGGERS}" ]; then
           echo "Triggers omitted, deployment required"
           echo "triggered=true" >> $GITHUB_OUTPUT
+          exit 0
+        else
+          echo "Processing triggers"
+          git fetch origin "${{ inputs.diff_branch }}"
+          while read -r check; do
+            for t in "${TRIGGERS[@]}"; do
+              if [[ "${check}" =~ "${t}" ]]; then
+                  echo -e "Triggered: ${t}\n --> ${check}"
+                  echo "triggered=true" >> $GITHUB_OUTPUT
+                  exit 0
+              fi
+            done
+          done < <(git diff origin/"${{ inputs.diff_branch }}" --name-only)
         fi
-        TRIGGERS=${{ inputs.triggers }}
-        git fetch origin "${{ inputs.diff_branch }}"
-        while read -r check; do
-          for t in "${TRIGGERS[@]}"; do
-            if [[ "${check}" =~ "${t}" ]]; then
-                echo -e "Triggered: ${t}\n --> ${check}"
-                echo "triggered=true" >> $GITHUB_OUTPUT
-                exit 0
-            fi
-          done
-        done < <(git diff origin/"${{ inputs.diff_branch }}" --name-only)
-
         echo "Triggers not matched, deployment skipped"
 
     - name: Deploy

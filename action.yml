@@ -95,7 +95,7 @@ runs:
 
         # Triggers
         if [ -z ${{ inputs.triggers }} ]; then
-          "Triggers omitted, deployment required"
+          echo "Triggers omitted, deployment required"
           echo "triggered=true" >> $GITHUB_OUTPUT
         fi
         TRIGGERS=${{ inputs.triggers }}

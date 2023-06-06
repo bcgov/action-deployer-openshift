@@ -94,7 +94,7 @@ runs:
         echo url=${URL_HOST_PATH} | sed 's // / g' >> $GITHUB_OUTPUT
 
         # Triggers
-        TRIGGERS="${{ inputs.triggers }}"
+        TRIGGERS=${{ inputs.triggers }}
         if [ -z "${TRIGGERS}" ]; then
           echo "Triggers omitted, deployment required"
           echo "triggered=true" >> $GITHUB_OUTPUT

@@ -178,7 +178,7 @@ runs:
 
     - name: Penetration Test
       if: steps.vars.outputs.url && steps.vars.outputs.triggered &&( inputs.penetration_test == 'true' )
-      uses: zaproxy/action-full-scan@v0.4.0
+      uses: zaproxy/action-full-scan@v0.5.1
       with:
         target: https://${{ steps.vars.outputs.url }}
         cmd_options: "-a"

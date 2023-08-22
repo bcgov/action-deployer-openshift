@@ -33,6 +33,9 @@ inputs:
   penetration_test_issue:
     description: Allow ZAProxy to write issues with results
     default: "false"
+  penetration_test_issue_title:
+    description: ZAProxy issue title, requires issue=true
+    default: ""
   token:
     description: GitHub token
     default: ""
@@ -190,6 +193,7 @@ runs:
         cmd_options: "-a"
         fail_action: ${{ inputs.penetration_test_fail }}
         allow_issue_writing: ${{ inputs.penetration_test_issue }}
+        issue_title: ${{ inputs.penetration_test_issue_title }}
         token: ${{ inputs.token }}
 
     # Action repo needs to be present for cleanup/tests

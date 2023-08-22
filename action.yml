@@ -33,6 +33,9 @@ inputs:
   penetration_test_issue:
     description: Allow ZAProxy to write issues with results
     default: "false"
+  token:
+    description: GitHub token
+    default: ${{ secrets.GITHUB_TOKEN }}
   triggers:
     description: Omit to always build, otherwise trigger by path; e.g. ('./backend/', './frontend/)
   verification_path:
@@ -187,6 +190,7 @@ runs:
         cmd_options: "-a"
         fail_action: ${{ inputs.penetration_test_fail }}
         allow_issue_writing: ${{ inputs.penetration_test_issue }}
+        token: ${{ inputs.token }}
 
     # Action repo needs to be present for cleanup/tests
     - name: Checkout to make sure action.yml is present (tests)

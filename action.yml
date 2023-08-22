@@ -30,6 +30,9 @@ inputs:
   penetration_test_fail:
     description: Allow ZAProxy alerts to fail the workflow? [true/false]
     default: "false"
+  penetration_test_issue:
+    description: Allow ZAProxy to write issues with results
+    default: "false"
   triggers:
     description: Omit to always build, otherwise trigger by path; e.g. ('./backend/', './frontend/)
   verification_path:
@@ -183,7 +186,7 @@ runs:
         target: https://${{ steps.vars.outputs.url }}
         cmd_options: "-a"
         fail_action: ${{ inputs.penetration_test_fail }}
-        allow_issue_writing: false
+        allow_issue_writing: ${{ inputs.penetration_test_issue }}
 
     # Action repo needs to be present for cleanup/tests
     - name: Checkout to make sure action.yml is present (tests)

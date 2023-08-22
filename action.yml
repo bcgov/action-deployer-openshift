@@ -35,7 +35,7 @@ inputs:
     default: "false"
   token:
     description: GitHub token
-    default: ${{ secrets.GITHUB_TOKEN }}
+    default: ""
   triggers:
     description: Omit to always build, otherwise trigger by path; e.g. ('./backend/', './frontend/)
   verification_path:

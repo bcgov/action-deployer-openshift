@@ -50,6 +50,9 @@ Testing has only been done with public containers on ghcr.io (GitHub Container R
     # Allow ZAProxy alerts to fail the workflow? [true/false]
     penetration_test_fail: false
 
+    # Provide a name to enable ZAProxy issue creation; e.g. frontend, backend
+    penetration_test_issue: frontend
+
     # Bash array to diff for build triggering
     # Optional, defaults to nothing, which forces a build
     triggers: ('frontend/')
@@ -102,7 +105,7 @@ deploys:
 
 # Example, Matrix / Multiple Templates
 
-Deploy multiple templates in parallel.  This time penetration tests are enabled.  Runs on pull requests (PRs).
+Deploy multiple templates in parallel.  This time penetration tests are enabled and issues created.  Runs on pull requests (PRs).
 
 ```yaml
 deploys:
@@ -142,6 +145,7 @@ steps:
         -p COMMON_TEMPLATE_VAR=whatever-${{ github.event.number }}
         ${{ matrix.parameters }}
       penetration_test: true
+      penetration_test_issue: ${{ matrix.name }}
       triggers: ${{ matrix.triggers }}
 ```
 
@@ -174,7 +178,7 @@ deploys:
 
 Deployment templates are parsed for a route.  If found, those routes are verified with a curl command for status code 200 (success).  This ensures that applications are accessible from outside their OpenShift namespace/project.
 
-Provide `penetration_test: true` to instead run a penetration test using [OWASP ZAP (Zed Attack Proxy)](https://github.com/zaproxy/action-full-scan) against that route. `penetration_test_fail: false` can be used to fail pipelines where problems are found.
+Provide `penetration_test: true` to instead run a penetration test using [OWASP ZAP (Zed Attack Proxy)](https://github.com/zaproxy/action-full-scan) against that route. `penetration_test_fail: false` can be used to fail pipelines where problems are found.  `penetration_test_issue: name` creates issues and is generally preferable over failing pipelines.
 
 # Troubleshooting
 

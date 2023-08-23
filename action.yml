@@ -31,10 +31,7 @@ inputs:
     description: Allow ZAProxy alerts to fail the workflow? [true/false]
     default: "false"
   penetration_test_issue:
-    description: Allow ZAProxy to write issues with results
-    default: "false"
-  penetration_test_issue_title:
-    description: ZAProxy issue title, requires issue=true
+    description: Provide a name to enable ZAProxy issue creation; e.g. ${{ matrix.name }}, frontend, backend
     default: ""
   token:
     description: GitHub token
@@ -192,8 +189,9 @@ runs:
         target: https://${{ steps.vars.outputs.url }}
         cmd_options: "-a"
         fail_action: ${{ inputs.penetration_test_fail }}
-        allow_issue_writing: ${{ inputs.penetration_test_issue }}
-        issue_title: ${{ inputs.penetration_test_issue_title }}
+        # allow_... is purposefully obscured - if a title is provided, then = true
+        allow_issue_writing: ${{ inputs.penetration_test_issue && true || false }}
+        issue_title: "ZAP: ${{ inputs.penetration_test_issue }}"
         token: ${{ inputs.token }}
 
     # Action repo needs to be present for cleanup/tests

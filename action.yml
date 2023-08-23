@@ -33,9 +33,6 @@ inputs:
   penetration_test_issue:
     description: Provide a name to enable ZAProxy issue creation; e.g. ${{ matrix.name }}, frontend, backend
     default: ""
-  token:
-    description: GitHub token
-    default: ""
   triggers:
     description: Omit to always build, otherwise trigger by path; e.g. ('./backend/', './frontend/)
   verification_path:
@@ -192,7 +189,6 @@ runs:
         # allow_... is purposefully obscured - if a title is provided, then = true
         allow_issue_writing: ${{ inputs.penetration_test_issue && true || false }}
         issue_title: "ZAP: ${{ inputs.penetration_test_issue }}"
-        token: ${{ inputs.token }}
 
     # Action repo needs to be present for cleanup/tests
     - name: Checkout to make sure action.yml is present (tests)

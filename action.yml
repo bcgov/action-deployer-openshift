@@ -31,7 +31,7 @@ inputs:
     description: Allow ZAProxy alerts to fail the workflow? [true/false]
     default: "false"
   penetration_test_issue:
-    description: Provide a name to enable ZAProxy issue creation; e.g. ${{ matrix.name }}, frontend, backend
+    description: Provide a name to enable ZAProxy issue creation; e.g. frontend, backend
     default: ""
   triggers:
     description: Omit to always build, otherwise trigger by path; e.g. ('./backend/', './frontend/)

@@ -51,6 +51,7 @@ Testing has only been done with public containers on ghcr.io (GitHub Container R
     penetration_test_fail: false
 
     # Provide a name to enable ZAProxy issue creation; e.g. frontend, backend
+    # If the issue exists, it adds new comments to the existing issue.    
     penetration_test_issue: frontend
 
     # Bash array to diff for build triggering
@@ -178,7 +179,7 @@ deploys:
 
 Deployment templates are parsed for a route.  If found, those routes are verified with a curl command for status code 200 (success).  This ensures that applications are accessible from outside their OpenShift namespace/project.
 
-Provide `penetration_test: true` to instead run a penetration test using [OWASP ZAP (Zed Attack Proxy)](https://github.com/zaproxy/action-full-scan) against that route. `penetration_test_fail: false` can be used to fail pipelines where problems are found.  `penetration_test_issue: name` creates issues and is generally preferable over failing pipelines.
+Provide `penetration_test: true` to instead run a penetration test using [OWASP ZAP (Zed Attack Proxy)](https://github.com/zaproxy/action-full-scan) against that route. `penetration_test_fail: false` can be used to fail pipelines where problems are found.  `penetration_test_issue: name` creates or comments on issues and is generally preferable over failing pipelines.
 
 # Troubleshooting
 

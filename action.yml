@@ -56,7 +56,7 @@ inputs:
 runs:
   using: composite
   steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         repository: ${{ inputs.repository }}
 
@@ -193,4 +193,4 @@ runs:
     # Action repo needs to be present for cleanup/tests
     - name: Checkout to make sure action.yml is present (tests)
       if: ${{ github.repository }} != ${{ inputs.repository }}
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4

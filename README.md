@@ -54,7 +54,7 @@ Testing has only been done with public containers on ghcr.io (GitHub Container R
     # If the issue exists, it adds new comments to the existing issue.    
     penetration_test_issue: frontend
 
-    # Timeout minutes
+    # Timeout minutes, only affects the deployment steps
     # Default = 10
     timeout_minutes: 15
 

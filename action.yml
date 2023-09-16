@@ -34,8 +34,8 @@ inputs:
     description: Provide a name to enable ZAProxy issue creation; e.g. frontend, backend
     default: ""
   timeout_minutes:
-    description: Timeout, in minutes. [default=10]
-    default: 10
+    description: Timeout, in minutes, for deployment. [default=10]
+    default: "10"
   triggers:
     description: Omit to always build, otherwise trigger by path; e.g. ('./backend/', './frontend/)
   verification_path:

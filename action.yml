@@ -58,7 +58,6 @@ inputs:
 
 runs:
   using: composite
-  timeout-minutes: ${{ inputs.timeout_minutes }}
   steps:
     - uses: actions/checkout@v4
       with:
@@ -123,6 +122,7 @@ runs:
 
     - name: Deploy
       if: steps.vars.outputs.triggered
+      timeout-minutes: ${{ inputs.timeout_minutes }}
       shell: bash
       run: |
         # Expand for deployment steps

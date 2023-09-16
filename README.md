@@ -54,6 +54,10 @@ Testing has only been done with public containers on ghcr.io (GitHub Container R
     # If the issue exists, it adds new comments to the existing issue.    
     penetration_test_issue: frontend
 
+    # Timeout minutes
+    # Default = 10
+    timeout_minutes: 15
+
     # Bash array to diff for build triggering
     # Optional, defaults to nothing, which forces a build
     triggers: ('frontend/')
@@ -94,8 +98,8 @@ deploys:
       uses: bcgov-nr/action-deployer-openshift.yml@main
       with:
         file: frontend/openshift.deploy.yml
-        oc_namespace: ${{ secrets.OC_NAMESPACE }}
-        oc_server: ${{ secrets.OC_SERVER }}
+        oc_namespace: ${{ vars.OC_NAMESPACE }}
+        oc_server: ${{ vars.OC_SERVER }}
         oc_token: ${{ secrets.OC_TOKEN }}
         overwrite: true
         parameters:

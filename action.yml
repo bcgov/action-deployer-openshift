@@ -58,7 +58,7 @@ inputs:
 
 runs:
   using: composite
-  timeout-minutes: ${{ inputs.timeout-minutes }}
+  timeout-minutes: ${{ inputs.timeout_minutes }}
   steps:
     - uses: actions/checkout@v4
       with:

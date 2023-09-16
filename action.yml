@@ -35,7 +35,7 @@ inputs:
     default: ""
   timeout:
     description: Timeout for deployment. [default=10m]
-    default: "15m"
+    default: "10m"
   triggers:
     description: Omit to always build, otherwise trigger by path; e.g. ('./backend/', './frontend/)
   verification_path:

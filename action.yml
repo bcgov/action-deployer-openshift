@@ -33,9 +33,9 @@ inputs:
   penetration_test_issue:
     description: Provide a name to enable ZAProxy issue creation; e.g. frontend, backend
     default: ""
-  timeout_minutes:
-    description: Timeout, in minutes, for deployment. [default=10]
-    default: "10"
+  timeout:
+    description: Timeout for deployment. [default=10m]
+    default: "15m"
   triggers:
     description: Omit to always build, otherwise trigger by path; e.g. ('./backend/', './frontend/)
   verification_path:
@@ -122,7 +122,6 @@ runs:
 
     - name: Deploy
       if: steps.vars.outputs.triggered
-      timeout-minutes: ${{ inputs.timeout_minutes }}
       shell: bash
       run: |
         # Expand for deployment steps
@@ -144,7 +143,7 @@ runs:
         # Apply (overwrites) or create (does not overwrite) using processed template
         TEMPLATE="$(oc process -f ${{ inputs.file }} ${{ inputs.parameters }} --local)"
         if [ "${{ inputs.overwrite }}" == "true" ]; then
-          oc apply -f - <<< "${TEMPLATE}"
+          oc apply --timeout=${{ inputs.timeout }} -f - <<< "${TEMPLATE}"
         else
           # Suppress AlreadyExists errors and expected failure
           oc create -f - 2>&1 <<< "${TEMPLATE}" | sed 's/.*: //'

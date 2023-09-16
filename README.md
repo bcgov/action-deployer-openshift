@@ -55,7 +55,7 @@ Testing has only been done with public containers on ghcr.io (GitHub Container R
     penetration_test_issue: frontend
 
     # Timeout seconds, only affects the OpenShift deployment (apply/create)
-    # Default = "10m"
+    # Default = "15m"
     timeout: "15m"
 
     # Bash array to diff for build triggering

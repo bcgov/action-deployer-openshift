@@ -50,6 +50,10 @@ Testing has only been done with public containers on ghcr.io (GitHub Container R
     # Allow ZAProxy alerts to fail the workflow? [true/false]
     penetration_test_fail: false
 
+    # Provide a name for ZAProxy workflow artifacts; e.g. frontend, backend
+    # Without this multiple package artifact names can collide
+    penetration_test_artifact: frontend
+
     # Provide a name to enable ZAProxy issue creation; e.g. frontend, backend
     # If the issue exists, it adds new comments to the existing issue.    
     penetration_test_issue: frontend

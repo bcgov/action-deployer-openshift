@@ -30,7 +30,7 @@ inputs:
   penetration_test_fail:
     description: Allow ZAProxy alerts to fail the workflow? [true|false]
     default: "false"
-  penetration_test_artifact_name:
+  penetration_test_artifact:
     description: Provide a name to attach ZAProxy scan artifacts to workflows; e.g. frontend, backend
     default: "unnamed"
   penetration_test_issue:
@@ -197,7 +197,7 @@ runs:
         fail_action: "${{ inputs.penetration_test_fail }}"
         # allow_... is purposefully obscured - if a title is provided, then = true
         allow_issue_writing: "${{ inputs.penetration_test_issue && true || false }}"
-        artifact_name: "zap_${{ inputs.penetration_test_artifact_name }}"
+        artifact_name: "zap_${{ inputs.penetration_test_artifact }}"
         issue_title: "ZAP: ${{ inputs.penetration_test_issue }}"
 
     # Action repo needs to be present for cleanup/tests

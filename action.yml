@@ -26,10 +26,13 @@ inputs:
   parameters:
     description: Template parameters/variables to pass (e.g. -p ZONE=...)
   penetration_test:
-    description: Run a ZAProxy penetration test against any routes? [true/false]
+    description: Run a ZAProxy penetration test against any routes? [true|false]
   penetration_test_fail:
-    description: Allow ZAProxy alerts to fail the workflow? [true/false]
+    description: Allow ZAProxy alerts to fail the workflow? [true|false]
     default: "false"
+  penetration_test_artifact_name:
+    description: Provide a name to attach ZAProxy scan artifacts to workflows; e.g. frontend, backend
+    default: "unnamed"
   penetration_test_issue:
     description: Provide a name to enable ZAProxy issue creation; e.g. frontend, backend
     default: ""
@@ -191,9 +194,10 @@ runs:
       with:
         target: https://${{ steps.vars.outputs.url }}
         cmd_options: "-a"
-        fail_action: ${{ inputs.penetration_test_fail }}
+        fail_action: "${{ inputs.penetration_test_fail }}"
         # allow_... is purposefully obscured - if a title is provided, then = true
-        allow_issue_writing: ${{ inputs.penetration_test_issue && true || false }}
+        allow_issue_writing: "${{ inputs.penetration_test_issue && true || false }}"
+        artifact_name: "zap_${{ inputs.penetration_test_artifact_name }}"
         issue_title: "ZAP: ${{ inputs.penetration_test_issue }}"
 
     # Action repo needs to be present for cleanup/tests

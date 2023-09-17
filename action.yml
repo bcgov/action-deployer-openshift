@@ -50,11 +50,14 @@ inputs:
 
   ### Usually a bad idea / not recommended
   diff_branch:
-    default: ${{ github.event.repository.default_branch }}
     description: Branch to diff against
+    default: ${{ github.event.repository.default_branch }}
   repository:
-    default: ${{ github.repository }}
     description: Optionally, specify a different repo to clone
+    default: ${{ github.repository }}
+  penetration_test_token:
+    description: Specify token (GH or PAT), instead of inheriting one from the calling workflow
+    default: ${{ github.token }}
 
 runs:
   using: composite

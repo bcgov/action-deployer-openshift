@@ -82,6 +82,10 @@ Testing has only been done with public containers on ghcr.io (GitHub Container R
     # Repository to clone and process
     # Useful for consuming other repos, defaults to the current one
     repository: ${{ github.repository }}
+
+    # Specify GITHUB_TOKEN or Personal Access Token (PAT) for issue writing
+    # Defaults to inheriting from the calling workflow
+    penetration_test_token: ${{ github.token }}
 ```
 
 # Example, Single Template

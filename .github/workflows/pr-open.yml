@@ -53,5 +53,4 @@ jobs:
             -p PROMOTE=${{ env.repo_builds }}/${{ matrix.name }}:test
             ${{ matrix.parameters }}
           repository: ${{ env.repo_builds }}
-          triggers: ${{ matrix.triggers }}
           verification_path: ${{ matrix.verification_path }}

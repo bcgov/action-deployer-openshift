@@ -204,6 +204,7 @@ runs:
         allow_issue_writing: "${{ inputs.name && true || false }}"
         artifact_name: "zap_${{ inputs.name }}"
         issue_title: "ZAP: ${{ inputs.name }}"
+        token: ${{ inputs.penetration_test_token }}
 
     # Action repo needs to be present for cleanup/tests
     - name: Checkout to make sure action.yml is present (tests)

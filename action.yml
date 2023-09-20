@@ -23,23 +23,33 @@ inputs:
     required: true
 
   ### Typical / recommended
-  name:
-    description: Name that will be used in any issues artifacts; e.g. ZAP pen tests
   parameters:
-    description: Template parameters/variables to pass; e.g. -p ZONE=...
+    description: Template parameters/variables to pass (e.g. -p ZONE=...)
   penetration_test:
     description: Run a ZAProxy penetration test against any routes? [true|false]
-  penetration_test_token:
-    description: Specify token (GH or PAT), instead of inheriting one from the calling workflow
-    default: ${{ github.token }}
+  penetration_test_fail:
+    description: Allow ZAProxy alerts to fail the workflow? [true|false]
+    default: "false"
+  penetration_test_artifact:
+    description: Provide a name to attach ZAProxy scan artifacts to workflows; e.g. frontend, backend
+    default: "unnamed"
+  penetration_test_issue:
+    description: Provide a name to enable ZAProxy issue creation; e.g. frontend, backend
+    default: ""
   timeout:
     description: Timeout for deployment. [default=15m]
     default: "15m"
   triggers:
     description: Omit to always build, otherwise trigger by path; e.g. ('./backend/', './frontend/)
   verification_path:
-    description: Sets the health endpoint to be used during verificatoin, does not require '/' at the begining; e.g. api
+    description: Sets the health endpoint to be used during check stage, does not require the '/' at the begining
     default: ""
+  verification_retry_attempts:
+    description: Number of times to attempt deployment verification
+    default: "3"
+  verification_retry_seconds:
+    description: Seconds to wait between deployment verification attempts
+    default: "10"
 
   ### Usually a bad idea / not recommended
   diff_branch:
@@ -48,24 +58,9 @@ inputs:
   repository:
     description: Optionally, specify a different repo to clone
     default: ${{ github.repository }}
-  penetration_test_fail:
-    description: Allow ZAProxy alerts to fail the workflow? Caution, very annoying!  [true|false]
-    default: "false"
-  verification_retry_attempts:
-    description: Number of times to attempt deployment verification
-    default: "3"
-  verification_retry_seconds:
-    description: Seconds to wait between deployment verification attempts
-    default: "10"
-
-  ### Deprecated / to remove
-  # Both replaced by `penetration_test_name`, used for issues and artifacts
-  penetration_test_issue:
-    description: Provide a name to attach ZAProxy scan artifacts to workflows; e.g. frontend, backend
-    default: "unnamed"
-  penetration_test_artifact:
-    description: Provide a name to enable ZAProxy issue creation; e.g. frontend, backend
-    default: ""
+  penetration_test_token:
+    description: Specify token (GH or PAT), instead of inheriting one from the calling workflow
+    default: ${{ github.token }}
 
 runs:
   using: composite
@@ -193,11 +188,6 @@ runs:
         echo -e "\nRoute verification failed"
         exit 1
 
-    # Action repo needs to be present for cleanup/tests
-    - name: Checkout to make sure action.yml is present (tests)
-      if: ${{ github.repository }} != ${{ inputs.repository }}
-      uses: actions/checkout@v4
-
     - name: Penetration Test
       if: steps.vars.outputs.url && steps.vars.outputs.triggered &&( inputs.penetration_test == 'true' )
       uses: zaproxy/action-full-scan@v0.7.0
@@ -206,8 +196,11 @@ runs:
         cmd_options: "-a"
         fail_action: "${{ inputs.penetration_test_fail }}"
         # allow_... is purposefully obscured - if a title is provided, then = true
-        allow_issue_writing: "${{ inputs.name && true || false }}"
-        artifact_name: "zap_${{ inputs.name }}"
-        issue_title: "ZAP: ${{ inputs.name }}"
-        token: ${{ inputs.penetration_test_token }}
+        allow_issue_writing: "${{ inputs.penetration_test_issue && true || false }}"
+        artifact_name: "zap_${{ inputs.penetration_test_artifact }}"
+        issue_title: "ZAP: ${{ inputs.penetration_test_issue }}"
 
+    # Action repo needs to be present for cleanup/tests
+    - name: Checkout to make sure action.yml is present (tests)
+      if: ${{ github.repository }} != ${{ inputs.repository }}
+      uses: actions/checkout@v4

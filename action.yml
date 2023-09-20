@@ -78,6 +78,7 @@ runs:
       shell: bash
       run: |
         # Expand for inputs and variables
+        set -eu
 
         # Bug mitigation - OpenShift hates images with capitals in org/repo names
         REPO=${{ inputs.repository }}

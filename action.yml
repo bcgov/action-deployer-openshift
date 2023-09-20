@@ -60,13 +60,11 @@ inputs:
     description: Seconds to wait between deployment verification attempts
     default: "10"
 
-  ### Deprecated / to be removed
+  ### Deprecated
   penetration_test_artifact:
     description: Provide a name to attach ZAProxy scan artifacts to workflows; e.g. frontend, backend
-    default: "unnamed"
   penetration_test_issue:
     description: Provide a name to enable ZAProxy issue creation; e.g. frontend, backend
-    default: ""
 
 runs:
   using: composite
@@ -86,6 +84,13 @@ runs:
         if [[ $REPO != ${REPO,,} ]]; then
           echo -e "An OpenShift bug prevents capital letters in repo names.\n"
           echo -e "Please handle that using the `repository` parameter.\n"
+          exit 1
+        fi
+
+        # Deprecation notices
+        if [ ! -z ${{ inputs.penetration_test_artifact }}]||[ ! -z ${{ inputs.penetration_test_issue }}]; then
+          echo -e "Params penetration_test_artifact and penetration_test_issue have been deprecated. \n"
+          echo -e "Please use param: name instead.  Exiting.\n"
           exit 1
         fi
 

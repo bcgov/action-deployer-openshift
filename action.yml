@@ -88,7 +88,7 @@ runs:
         fi
 
         # Deprecation notices
-        if [ ! -z ${{ inputs.penetration_test_artifact }}]||[ ! -z ${{ inputs.penetration_test_issue }}]; then
+        if [ ! -z ${{ inputs.penetration_test_artifact }} ]||[ ! -z ${{ inputs.penetration_test_issue }} ]; then
           echo -e "Params penetration_test_artifact and penetration_test_issue have been deprecated. \n"
           echo -e "Please use param: name instead.  Exiting.\n"
           exit 1

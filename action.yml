@@ -24,20 +24,16 @@ inputs:
 
   ### Typical / recommended
   name:
-    description: Name that will be used in any issues artifacts; e.g. ZAP pen tests
+    description: Name for any penetration test issues or artifacts; e.g. frontend
+    default: "name_unset"
   parameters:
     description: Template parameters/variables to pass (e.g. -p ZONE=...)
   penetration_test:
     description: Run a ZAProxy penetration test against any routes? [true|false]
+    default: "false"
   penetration_test_fail:
     description: Allow ZAProxy alerts to fail the workflow? [true|false]
     default: "false"
-  penetration_test_artifact:
-    description: Provide a name to attach ZAProxy scan artifacts to workflows; e.g. frontend, backend
-    default: "unnamed"
-  penetration_test_issue:
-    description: Provide a name to enable ZAProxy issue creation; e.g. frontend, backend
-    default: ""
   timeout:
     description: Timeout for deployment. [default=15m]
     default: "15m"
@@ -46,12 +42,6 @@ inputs:
   verification_path:
     description: Sets the health endpoint to be used during check stage, does not require the '/' at the begining
     default: ""
-  verification_retry_attempts:
-    description: Number of times to attempt deployment verification
-    default: "3"
-  verification_retry_seconds:
-    description: Seconds to wait between deployment verification attempts
-    default: "10"
 
   ### Usually a bad idea / not recommended
   diff_branch:
@@ -63,6 +53,20 @@ inputs:
   penetration_test_token:
     description: Specify token (GH or PAT), instead of inheriting one from the calling workflow
     default: ${{ github.token }}
+  verification_retry_attempts:
+    description: Number of times to attempt deployment verification
+    default: "3"
+  verification_retry_seconds:
+    description: Seconds to wait between deployment verification attempts
+    default: "10"
+
+  ### Deprecated / to be removed
+  penetration_test_artifact:
+    description: Provide a name to attach ZAProxy scan artifacts to workflows; e.g. frontend, backend
+    default: "unnamed"
+  penetration_test_issue:
+    description: Provide a name to enable ZAProxy issue creation; e.g. frontend, backend
+    default: ""
 
 runs:
   using: composite
@@ -197,8 +201,7 @@ runs:
         target: https://${{ steps.vars.outputs.url }}
         cmd_options: "-a"
         fail_action: "${{ inputs.penetration_test_fail }}"
-        # allow_... is purposefully obscured - if a title is provided, then = true
-        allow_issue_writing: "${{ inputs.penetration_test_issue && true || false }}"
+        allow_issue_writing: "${{ inputs.penetration_test }}"
         artifact_name: "zap_${{ inputs.name }}"
         issue_title: "ZAP: ${{ inputs.name }}"
         token: ${{ inputs.penetration_test_token }}

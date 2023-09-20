@@ -106,14 +106,14 @@ runs:
 
         # Output URL (host + path), but only if ROUTE_HOST is populated
         ROUTE_HOST=$(jq -rn "${TEMPLATE} | .items[] | select(.kind==\"Route\").spec.host //empty")
-        ROUTE_PATH_INPUTS=${{ inputs.verification_path }}
-        ROUTE_PATH_TEMPLATE=$(jq -rn "${TEMPLATE} | .items[] | select(.kind==\"Route\").spec.path //empty")
         if [ ! -z ${ROUTE_HOST} ]; then
-          # Route path from inputs or template (inputs.verification_path takes priority over template)
-          ROUTE_PATH=${${ROUTE_PATH_INPUT}:-${ROUTE_PATH_TEMPLATE}}
-          URL_HOST_PATH="${ROUTE_HOST}/${ROUTE_PATH}"
+          # Path from inputs takes priority over template
+          ROUTE_PATH=${{ inputs.verification_path }}
+          [ ! -z ${ROUTE_PATH} ]|| \
+            ROUTE_PATH=$(jq -rn "${TEMPLATE} | .items[] | select(.kind==\"Route\").spec.path //empty")
 
           # Removes any duplicate slashes and pass to GITHUB_OUTPUT
+          URL_HOST_PATH="${ROUTE_HOST}/${ROUTE_PATH}"
           echo url=${URL_HOST_PATH} | sed 's // / g' >> $GITHUB_OUTPUT
         fi
 

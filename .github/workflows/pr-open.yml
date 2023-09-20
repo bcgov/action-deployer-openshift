@@ -28,14 +28,14 @@ jobs:
             overwrite: true
             parameters: -p MIN_REPLICAS=1 -p MAX_REPLICAS=2
             penetration_test: true
-            # triggers: ('backend/')
+            triggers: ('backend/')
             verification_path: /api
           - name: frontend
             file: frontend/openshift.deploy.yml
             overwrite: true
             parameters: -p MIN_REPLICAS=1 -p MAX_REPLICAS=2
-            penetration_test: true
-            # triggers: ('frontend/')
+            penetration_test: false
+            triggers: ('frontend/')
     steps:
       - uses: actions/checkout@v4
       - name: Deploys

@@ -50,6 +50,9 @@ inputs:
   repository:
     description: Optionally, specify a different repo to clone
     default: ${{ github.repository }}
+  penetration_test_create_issue:
+    description: Create an issue with penetration test results?  [true|false]
+    default: "true"
   penetration_test_token:
     description: Specify token (GH or PAT), instead of inheriting one from the calling workflow
     default: ${{ github.token }}
@@ -204,13 +207,13 @@ runs:
       if: steps.vars.outputs.url && steps.vars.outputs.triggered &&( inputs.penetration_test == 'true' )
       uses: zaproxy/action-full-scan@v0.7.0
       with:
-        target: https://${{ steps.vars.outputs.url }}
+        allow_issue_writing: "${{ inputs.penetration_test_create_issue }}"
+        artifact_name: "zap_${{ inputs.name }}"
         cmd_options: "-a"
         fail_action: "${{ inputs.penetration_test_fail }}"
-        allow_issue_writing: "${{ inputs.penetration_test }}"
-        artifact_name: "zap_${{ inputs.name }}"
         issue_title: "ZAP: ${{ inputs.name }}"
-        token: ${{ inputs.penetration_test_token }}
+        target: https://${{ steps.vars.outputs.url }}
+        token: "${{ inputs.penetration_test_token }}"
 
     # Action repo needs to be present for cleanup/tests
     - name: Checkout to make sure action.yml is present (tests)

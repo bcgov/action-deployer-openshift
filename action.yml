@@ -193,6 +193,11 @@ runs:
         echo -e "\nRoute verification failed"
         exit 1
 
+    # Action repo needs to be present for cleanup/tests
+    - name: Checkout to make sure action.yml is present (tests)
+      if: ${{ github.repository }} != ${{ inputs.repository }}
+      uses: actions/checkout@v4
+
     - name: Penetration Test
       if: steps.vars.outputs.url && steps.vars.outputs.triggered &&( inputs.penetration_test == 'true' )
       uses: zaproxy/action-full-scan@v0.7.0
@@ -206,7 +211,3 @@ runs:
         issue_title: "ZAP: ${{ inputs.name }}"
         token: ${{ inputs.penetration_test_token }}
 
-    # Action repo needs to be present for cleanup/tests
-    - name: Checkout to make sure action.yml is present (tests)
-      if: ${{ github.repository }} != ${{ inputs.repository }}
-      uses: actions/checkout@v4

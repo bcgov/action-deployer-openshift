@@ -23,6 +23,8 @@ inputs:
     required: true
 
   ### Typical / recommended
+  name:
+    description: Name that will be used in any issues artifacts; e.g. ZAP pen tests
   parameters:
     description: Template parameters/variables to pass (e.g. -p ZONE=...)
   penetration_test:
@@ -197,8 +199,9 @@ runs:
         fail_action: "${{ inputs.penetration_test_fail }}"
         # allow_... is purposefully obscured - if a title is provided, then = true
         allow_issue_writing: "${{ inputs.penetration_test_issue && true || false }}"
-        artifact_name: "zap_${{ inputs.penetration_test_artifact }}"
-        issue_title: "ZAP: ${{ inputs.penetration_test_issue }}"
+        artifact_name: "zap_${{ inputs.name }}"
+        issue_title: "ZAP: ${{ inputs.name }}"
+        token: ${{ inputs.penetratoin_test_token }}
 
     # Action repo needs to be present for cleanup/tests
     - name: Checkout to make sure action.yml is present (tests)

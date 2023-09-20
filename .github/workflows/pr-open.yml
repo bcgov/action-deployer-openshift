@@ -48,8 +48,6 @@ jobs:
           oc_token: ${{ secrets.OC_TOKEN }}
           overwrite: ${{ matrix.overwrite }}
           penetration_test: ${{ matrix.penetration_test }}
-          penetration_test_issue: true
-          penetration_test_token: ${{ secrets.GITHUB_TOKEN }}
           parameters:
             -p ZONE=${{ github.event.number }} -p NAME=${{ github.event.repository.name }}
             -p PROMOTE=${{ env.repo_builds }}/${{ matrix.name }}:test

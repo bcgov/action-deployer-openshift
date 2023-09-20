@@ -101,22 +101,21 @@ runs:
         # ImageStream, DeploymentConfig and Route Host from template
         DC=$(jq -rn "${TEMPLATE} | .items[] | select(.kind==\"DeploymentConfig\").metadata.name //empty")
         IS=$(jq -rn "${TEMPLATE} | .items[] | select(.kind==\"ImageStream\").metadata.name //empty")
-        ROUTE_HOST=$(jq -rn "${TEMPLATE} | .items[] | select(.kind==\"Route\").spec.host //empty")
-
-        # Route path from inputs or template (inputs.verification_path takes priority)
-        ROUTE_PATH=${{ inputs.verification_path }}
-        [ ! -z "${ROUTE_PATH}" ]|| \
-          ROUTE_PATH=$(jq -rn "${TEMPLATE} | .items[] | select(.kind==\"Route\").spec.path //empty")
-
-        # Build URL from route and path, but only if ROUTE_HOST is populated
-        [ -z "${ROUTE_HOST}" ]|| URL_HOST_PATH="${ROUTE_HOST}/${ROUTE_PATH}"
-
         echo imageStream=${IS} >> $GITHUB_OUTPUT
         echo deploymentConfig=${DC} >> $GITHUB_OUTPUT
 
-        # Removes any double slashles, e.g. inputs.verification_path
-        [ ! -z ${URL_HOST_PATH} ]|| \
+        # Output URL (host + path), but only if ROUTE_HOST is populated
+        ROUTE_HOST=$(jq -rn "${TEMPLATE} | .items[] | select(.kind==\"Route\").spec.host //empty")
+        ROUTE_PATH_INPUTS=${{ inputs.verification_path }}
+        ROUTE_PATH_TEMPLATE=$(jq -rn "${TEMPLATE} | .items[] | select(.kind==\"Route\").spec.path //empty")
+        if [ ! -z ${ROUTE_HOST} ]; then
+          # Route path from inputs or template (inputs.verification_path takes priority over template)
+          ROUTE_PATH=${${ROUTE_PATH_INPUT}:-${ROUTE_PATH_TEMPLATE}}
+          URL_HOST_PATH="${ROUTE_HOST}/${ROUTE_PATH}"
+
+          # Removes any duplicate slashes and pass to GITHUB_OUTPUT
           echo url=${URL_HOST_PATH} | sed 's // / g' >> $GITHUB_OUTPUT
+        fi
 
         # Triggers
         TRIGGERS=${{ inputs.triggers }}

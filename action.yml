@@ -115,7 +115,7 @@ runs:
         echo deploymentConfig=${DC} >> $GITHUB_OUTPUT
 
         # Removes any double slashles, e.g. inputs.verification_path
-        [ -z ${URL_HOST_PATH} ]|| \
+        [ ! -z ${URL_HOST_PATH} ]|| \
           echo url=${URL_HOST_PATH} | sed 's // / g' >> $GITHUB_OUTPUT
 
         # Triggers

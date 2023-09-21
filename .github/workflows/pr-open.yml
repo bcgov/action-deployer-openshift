@@ -14,8 +14,8 @@ jobs:
   deploys:
     name: Deploys
     runs-on: ubuntu-latest
-    permissions:
-      issues: write
+    # permissions:
+    #   issues: write
     strategy:
       matrix:
         name: [database, backend, frontend]

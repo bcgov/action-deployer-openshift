@@ -23,19 +23,17 @@ inputs:
     required: true
 
   ### Typical / recommended
+  name:
+    description: Name for any penetration test issues or artifacts; e.g. frontend
+    default: "name_unset"
   parameters:
     description: Template parameters/variables to pass (e.g. -p ZONE=...)
   penetration_test:
     description: Run a ZAProxy penetration test against any routes? [true|false]
+    default: "false"
   penetration_test_fail:
     description: Allow ZAProxy alerts to fail the workflow? [true|false]
     default: "false"
-  penetration_test_artifact:
-    description: Provide a name to attach ZAProxy scan artifacts to workflows; e.g. frontend, backend
-    default: "unnamed"
-  penetration_test_issue:
-    description: Provide a name to enable ZAProxy issue creation; e.g. frontend, backend
-    default: ""
   timeout:
     description: Timeout for deployment. [default=15m]
     default: "15m"
@@ -44,12 +42,6 @@ inputs:
   verification_path:
     description: Sets the health endpoint to be used during check stage, does not require the '/' at the begining
     default: ""
-  verification_retry_attempts:
-    description: Number of times to attempt deployment verification
-    default: "3"
-  verification_retry_seconds:
-    description: Seconds to wait between deployment verification attempts
-    default: "10"
 
   ### Usually a bad idea / not recommended
   diff_branch:
@@ -58,9 +50,24 @@ inputs:
   repository:
     description: Optionally, specify a different repo to clone
     default: ${{ github.repository }}
+  penetration_test_create_issue:
+    description: Create an issue with penetration test results?  [true|false]
+    default: "true"
   penetration_test_token:
     description: Specify token (GH or PAT), instead of inheriting one from the calling workflow
     default: ${{ github.token }}
+  verification_retry_attempts:
+    description: Number of times to attempt deployment verification
+    default: "3"
+  verification_retry_seconds:
+    description: Seconds to wait between deployment verification attempts
+    default: "10"
+
+  ### Deprecated
+  penetration_test_artifact:
+    description: Provide a name to attach ZAProxy scan artifacts to workflows; e.g. frontend, backend
+  penetration_test_issue:
+    description: Provide a name to enable ZAProxy issue creation; e.g. frontend, backend
 
 runs:
   using: composite
@@ -74,6 +81,7 @@ runs:
       shell: bash
       run: |
         # Expand for inputs and variables
+        set -eu
 
         # Bug mitigation - OpenShift hates images with capitals in org/repo names
         REPO=${{ inputs.repository }}
@@ -83,27 +91,34 @@ runs:
           exit 1
         fi
 
+        # Deprecation notices
+        if [ ! -z ${{ inputs.penetration_test_artifact }} ]||[ ! -z ${{ inputs.penetration_test_issue }} ]; then
+          echo -e "Params penetration_test_artifact and penetration_test_issue have been deprecated. \n"
+          echo -e "Please use param: name instead.  Exiting.\n"
+          exit 1
+        fi
+
         # Process template, consuming variables/parameters
         TEMPLATE="$(oc process -f ${{ inputs.file }} ${{ inputs.parameters }} --local)"
 
         # ImageStream, DeploymentConfig and Route Host from template
         DC=$(jq -rn "${TEMPLATE} | .items[] | select(.kind==\"DeploymentConfig\").metadata.name //empty")
         IS=$(jq -rn "${TEMPLATE} | .items[] | select(.kind==\"ImageStream\").metadata.name //empty")
-        ROUTE_HOST=$(jq -rn "${TEMPLATE} | .items[] | select(.kind==\"Route\").spec.host //empty")
-
-        # Route path from inputs or template (inputs.verification_path takes priority)
-        ROUTE_PATH=${{ inputs.verification_path }}
-        [ ! -z "${ROUTE_PATH}" ]|| \
-          ROUTE_PATH=$(jq -rn "${TEMPLATE} | .items[] | select(.kind==\"Route\").spec.path //empty")
-
-        # Build URL from route and path, but only if ROUTE_HOST is populated
-        [ -z "${ROUTE_HOST}" ]|| URL_HOST_PATH="${ROUTE_HOST}/${ROUTE_PATH}"
-
         echo imageStream=${IS} >> $GITHUB_OUTPUT
         echo deploymentConfig=${DC} >> $GITHUB_OUTPUT
 
-        # Removes any double slashles, e.g. inputs.verification_path
-        echo url=${URL_HOST_PATH} | sed 's // / g' >> $GITHUB_OUTPUT
+        # Output URL (host + path), but only if ROUTE_HOST is populated
+        ROUTE_HOST=$(jq -rn "${TEMPLATE} | .items[] | select(.kind==\"Route\").spec.host //empty")
+        if [ ! -z ${ROUTE_HOST} ]; then
+          # Path from inputs takes priority over template
+          ROUTE_PATH=${{ inputs.verification_path }}
+          [ ! -z ${ROUTE_PATH} ]|| \
+            ROUTE_PATH=$(jq -rn "${TEMPLATE} | .items[] | select(.kind==\"Route\").spec.path //empty")
+
+          # Removes any duplicate slashes and pass to GITHUB_OUTPUT
+          URL_HOST_PATH="${ROUTE_HOST}/${ROUTE_PATH}"
+          echo url=${URL_HOST_PATH} | sed 's // / g' >> $GITHUB_OUTPUT
+        fi
 
         # Triggers
         TRIGGERS=${{ inputs.triggers }}
@@ -127,7 +142,7 @@ runs:
         echo "Triggers not matched, deployment skipped"
 
     - name: Deploy
-      if: steps.vars.outputs.triggered
+      if: steps.vars.outputs.triggered == 'true'
       shell: bash
       run: |
         # Expand for deployment steps
@@ -160,7 +175,9 @@ runs:
         [ -z "${DC}" ]|| oc rollout status dc/${DC} -w
 
     - name: Route Verification
-      if: steps.vars.outputs.url && steps.vars.outputs.triggered &&( inputs.penetration_test != 'true' )
+      if: steps.vars.outputs.url &&
+        ( steps.vars.outputs.triggered == 'true' )&&
+        ( inputs.penetration_test != 'true' )
       shell: bash
       run: |
         # Expand for route verification
@@ -189,16 +206,18 @@ runs:
         exit 1
 
     - name: Penetration Test
-      if: steps.vars.outputs.url && steps.vars.outputs.triggered &&( inputs.penetration_test == 'true' )
+      if: steps.vars.outputs.url &&
+        ( steps.vars.outputs.triggered == 'true' )&&
+        ( inputs.penetration_test == 'true' )
       uses: zaproxy/action-full-scan@v0.7.0
       with:
-        target: https://${{ steps.vars.outputs.url }}
+        allow_issue_writing: "${{ inputs.penetration_test_create_issue }}"
+        artifact_name: "zap_${{ inputs.name }}"
         cmd_options: "-a"
         fail_action: "${{ inputs.penetration_test_fail }}"
-        # allow_... is purposefully obscured - if a title is provided, then = true
-        allow_issue_writing: "${{ inputs.penetration_test_issue && true || false }}"
-        artifact_name: "zap_${{ inputs.penetration_test_artifact }}"
-        issue_title: "ZAP: ${{ inputs.penetration_test_issue }}"
+        issue_title: "ZAP: ${{ inputs.name }}"
+        target: https://${{ steps.vars.outputs.url }}
+        token: "${{ inputs.penetration_test_token }}"
 
     # Action repo needs to be present for cleanup/tests
     - name: Checkout to make sure action.yml is present (tests)

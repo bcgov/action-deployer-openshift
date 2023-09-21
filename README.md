@@ -36,27 +36,20 @@ Testing has only been done with public containers on ghcr.io (GitHub Container R
     
     # Overwrite objects using `oc apply` or only create with `oc create`
     # Expected errors from `oc create` are handled with `set +o pipefail`
-    overwrite: true
+    overwrite: "true"
 
 
     ### Typical / recommended
 
+    # Name for any penetration test issues or artifacts
+    name: "frontend"
+
     # Template parameters/variables to pass
-    parameters: -p PR_NO=${{ github.event.number }}
+    parameters: -p ZONE=${{ github.event.number }}
 
     # Run a ZAProxy penetration test against any routes? [true/false]
+    # Requires `name` to be set if enabled/true
     penetration_test: false
-
-    # Allow ZAProxy alerts to fail the workflow? [true/false]
-    penetration_test_fail: false
-
-    # Provide a name for ZAProxy workflow artifacts; e.g. frontend, backend
-    # Without this multiple package artifact names can collide
-    penetration_test_artifact: frontend
-
-    # Provide a name to enable ZAProxy issue creation; e.g. frontend, backend
-    # If the issue exists, it adds new comments to the existing issue.    
-    penetration_test_issue: frontend
 
     # Timeout seconds, only affects the OpenShift deployment (apply/create)
     # Default = "15m"
@@ -87,9 +80,26 @@ Testing has only been done with public containers on ghcr.io (GitHub Container R
     # Useful for consuming other repos, defaults to the current one
     repository: ${{ github.repository }}
 
+    # Create an issue for penetration test results? [true|false]
+    # Default = "true"
+    penetration_test_create_issue: "true"
+
+    # Allow ZAProxy alerts to fail the workflow? [true/false]
+    # Warning: annoying!
+    penetration_test_fail: false
+
     # Specify GITHUB_TOKEN or Personal Access Token (PAT) for issue writing
     # Defaults to inheriting from the calling workflow
     penetration_test_token: ${{ github.token }}
+
+
+    ### Deprecated / will fail and provide directions
+
+    # Replaced by `name` param
+    penetration_test_artifact: frontend
+
+    # # Replaced by `name` param
+    penetration_test_issue: frontend
 ```
 
 # Example, Single Template
@@ -149,6 +159,7 @@ steps:
   - name: Deploys
     uses: bcgov-nr/action-deployer-openshift.yml@main
     with:
+      name: ${{ matrix.name }}
       file: ${{ matrix.file }}
       oc_namespace: ${{ secrets.OC_NAMESPACE }}
       oc_server: ${{ secrets.OC_SERVER }}
@@ -158,7 +169,6 @@ steps:
         -p COMMON_TEMPLATE_VAR=whatever-${{ github.event.number }}
         ${{ matrix.parameters }}
       penetration_test: true
-      penetration_test_issue: ${{ matrix.name }}
       triggers: ${{ matrix.triggers }}
 ```
 
@@ -180,11 +190,11 @@ deploys:
         oc_server: ${{ secrets.OC_SERVER }}
         oc_token: ${{ secrets.OC_TOKEN }}
         overwrite: true
-        verification_url: health
         parameters:
           -p MIN_REPLICAS=1 -p MAX_REPLICAS=2
           -p PR_NUMBER=${{ github.event.number }}
         triggers: ${{ matrix.triggers }}
+        verification_url: health
 ```
 
 # Route Verification vs Penetration Testing

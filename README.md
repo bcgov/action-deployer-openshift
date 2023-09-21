@@ -111,7 +111,6 @@ deploys:
   name: Deploys
   runs-on: ubuntu-latest
   steps:
-    - uses: actions/checkout@v3
     - name: Deploys
       uses: bcgov-nr/action-deployer-openshift.yml@main
       with:
@@ -155,7 +154,6 @@ runs-on: ubuntu-latest
         overwrite: false
         file: common/openshift.init.yml
 steps:
-  - uses: actions/checkout@v3
   - name: Deploys
     uses: bcgov-nr/action-deployer-openshift.yml@main
     with:
@@ -181,7 +179,6 @@ deploys:
   name: Deploys
   runs-on: ubuntu-latest
   steps:
-    - uses: actions/checkout@v3
     - name: Deploys
       uses: bcgov-nr/action-deployer-openshift.yml@main
       with:

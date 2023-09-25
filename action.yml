@@ -72,15 +72,10 @@ inputs:
 runs:
   using: composite
   steps:
-    - uses: actions/checkout@v4
-      with:
-        repository: ${{ inputs.repository }}
-
-    # Process variables and inputs
-    - id: vars
-      shell: bash
+    # Notify about bugs and deprecations
+    - shell: bash
       run: |
-        # Expand for inputs and variables
+        # Notify about bugs and deprecations
         set -eu
 
         # Bug mitigation - OpenShift hates images with capitals in org/repo names
@@ -98,27 +93,13 @@ runs:
           exit 1
         fi
 
-        # Process template, consuming variables/parameters
-        TEMPLATE="$(oc process -f ${{ inputs.file }} ${{ inputs.parameters }} --local)"
-
-        # ImageStream, DeploymentConfig and Route Host from template
-        DC=$(jq -rn "${TEMPLATE} | .items[] | select(.kind==\"DeploymentConfig\").metadata.name //empty")
-        IS=$(jq -rn "${TEMPLATE} | .items[] | select(.kind==\"ImageStream\").metadata.name //empty")
-        echo imageStream=${IS} >> $GITHUB_OUTPUT
-        echo deploymentConfig=${DC} >> $GITHUB_OUTPUT
-
-        # Output URL (host + path), but only if ROUTE_HOST is populated
-        ROUTE_HOST=$(jq -rn "${TEMPLATE} | .items[] | select(.kind==\"Route\").spec.host //empty")
-        if [ ! -z ${ROUTE_HOST} ]; then
-          # Path from inputs takes priority over template
-          ROUTE_PATH=${{ inputs.verification_path }}
-          [ ! -z ${ROUTE_PATH} ]|| \
-            ROUTE_PATH=$(jq -rn "${TEMPLATE} | .items[] | select(.kind==\"Route\").spec.path //empty")
-
-          # Removes any duplicate slashes and pass to GITHUB_OUTPUT
-          URL_HOST_PATH="${ROUTE_HOST}/${ROUTE_PATH}"
-          echo url=${URL_HOST_PATH} | sed 's // / g' >> $GITHUB_OUTPUT
-        fi
+    # Current/calling repo is required for diff/triggers
+    - uses: actions/checkout@v4
+    - id: triggers
+      shell: bash
+      run: |
+        # Process triggers
+        set -eu
 
         # Triggers
         TRIGGERS=${{ inputs.triggers }}
@@ -141,8 +122,42 @@ runs:
         fi
         echo "Triggers not matched, deployment skipped"
 
+    # Process variables and inputs
+    # Remote/override repo is required if one has been specified (input)
+    - name: Checkout remote/override repo
+      if: ${{ github.repository }} != ${{ inputs.repository }}
+      uses: actions/checkout@v4
+      with:
+        repository: ${{ inputs.repository }}
+    - id: vars
+      shell: bash
+      run: |
+        # Expand for inputs and variables
+        set -eu
+
+        # Process template, consuming variables/parameters
+        TEMPLATE="$(oc process -f ${{ inputs.file }} ${{ inputs.parameters }} --local)"
+
+        # ImageStream, DeploymentConfig and Route Host from template
+        DC=$(jq -rn "${TEMPLATE} | .items[] | select(.kind==\"DeploymentConfig\").metadata.name //empty")
+        IS=$(jq -rn "${TEMPLATE} | .items[] | select(.kind==\"ImageStream\").metadata.name //empty")
+        echo imageStream=${IS} >> $GITHUB_OUTPUT
+        echo deploymentConfig=${DC} >> $GITHUB_OUTPUT
+
+        # Output URL (host + path), but only if ROUTE_HOST is populated
+        ROUTE_HOST=$(jq -rn "${TEMPLATE} | .items[] | select(.kind==\"Route\").spec.host //empty")
+        if [ ! -z ${ROUTE_HOST} ]; then
+          # Path from inputs takes priority over template
+          ROUTE_PATH=${{ inputs.verification_path }}
+          [ ! -z ${ROUTE_PATH} ]|| \
+            ROUTE_PATH=$(jq -rn "${TEMPLATE} | .items[] | select(.kind==\"Route\").spec.path //empty")
+
+          # Remove any duplicate slashes and pass to GITHUB_OUTPUT
+          echo url="${ROUTE_HOST}/${ROUTE_PATH}" | sed 's // / g' >> $GITHUB_OUTPUT
+        fi
+
     - name: Deploy
-      if: steps.vars.outputs.triggered == 'true'
+      if: steps.triggers.outputs.triggered == 'true'
       shell: bash
       run: |
         # Expand for deployment steps
@@ -176,7 +191,7 @@ runs:
 
     - name: Route Verification
       if: steps.vars.outputs.url &&
-        ( steps.vars.outputs.triggered == 'true' )&&
+        ( steps.triggers.outputs.triggered == 'true' )&&
         ( inputs.penetration_test != 'true' )
       shell: bash
       run: |
@@ -207,7 +222,7 @@ runs:
 
     - name: Penetration Test
       if: steps.vars.outputs.url &&
-        ( steps.vars.outputs.triggered == 'true' )&&
+        ( steps.triggers.outputs.triggered == 'true' )&&
         ( inputs.penetration_test == 'true' )
       uses: zaproxy/action-full-scan@v0.7.0
       with:
@@ -220,6 +235,6 @@ runs:
         token: "${{ inputs.penetration_test_token }}"
 
     # Action repo needs to be present for cleanup/tests
-    - name: Checkout to make sure action.yml is present (tests)
+    - name: Checkout local repo to make sure action.yml is present
       if: ${{ github.repository }} != ${{ inputs.repository }}
       uses: actions/checkout@v4

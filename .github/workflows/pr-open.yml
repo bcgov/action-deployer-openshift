@@ -44,9 +44,6 @@ jobs:
           oc_token: ${{ secrets.OC_TOKEN }}
           overwrite: ${{ matrix.overwrite }}
           penetration_test: ${{ matrix.penetration_test }}
-          parameters:
-            -p ZONE=${{ github.event.number }} -p NAME=${{ github.event.repository.name }}
-            -p IMAGE_TAG=test ${{ matrix.parameters }}
+          parameters: -p ZONE=test -p NAME=${{ github.event.repository.name }}
           repository: bcgov/quickstart-openshift
-          triggers: ${{ matrix.triggers }}
           verification_path: ${{ matrix.verification_path }}

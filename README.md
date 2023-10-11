@@ -159,8 +159,8 @@ steps:
     with:
       name: ${{ matrix.name }}
       file: ${{ matrix.file }}
-      oc_namespace: ${{ secrets.OC_NAMESPACE }}
-      oc_server: ${{ secrets.OC_SERVER }}
+      oc_namespace: ${{ vars.OC_NAMESPACE }}
+      oc_server: ${{ vars.OC_SERVER }}
       oc_token: ${{ secrets.OC_TOKEN }}
       overwrite: ${{ matrix.overwrite }}
       parameters:
@@ -183,8 +183,8 @@ deploys:
       uses: bcgov-nr/action-deployer-openshift.yml@main
       with:
         file: backend/openshift.deploy.yml
-        oc_namespace: ${{ secrets.OC_NAMESPACE }}
-        oc_server: ${{ secrets.OC_SERVER }}
+        oc_namespace: ${{ vars.OC_NAMESPACE }}
+        oc_server: ${{ vars.OC_SERVER }}
         oc_token: ${{ secrets.OC_TOKEN }}
         overwrite: true
         parameters:

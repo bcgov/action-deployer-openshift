@@ -72,6 +72,10 @@ Testing has only been done with public containers on ghcr.io (GitHub Container R
 
     ### Usually a bad idea / not recommended
 
+    # Delete completed deployer and job pods?
+    # Defaults to true
+    delete_completed: true
+
     # Overrides the default branch to diff against
     # Defaults to the default branch, usually `main`
     diff_branch: ${{ github.event.repository.default_branch }}

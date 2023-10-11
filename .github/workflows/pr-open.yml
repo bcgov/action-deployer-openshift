@@ -47,6 +47,6 @@ jobs:
           parameters:
             -p ZONE=${{ github.event.number }} -p NAME=${{ github.event.repository.name }}
             -p IMAGE_TAG=test ${{ matrix.parameters }}
-          repository: ${{ env.repo_builds }}
+          repository: bcgov/quickstart-openshift
           triggers: ${{ matrix.triggers }}
           verification_path: ${{ matrix.verification_path }}

@@ -44,6 +44,9 @@ inputs:
     default: ""
 
   ### Usually a bad idea / not recommended
+  delete_completed:
+    description: Delete completed pods
+    default: true
   diff_branch:
     description: Branch to diff against
     default: ${{ github.event.repository.default_branch }}
@@ -233,6 +236,18 @@ runs:
         issue_title: "ZAP: ${{ inputs.name }}"
         target: https://${{ steps.vars.outputs.url }}
         token: "${{ inputs.penetration_test_token }}"
+
+    - if: inputs.delete_completed == 'true'
+      shell: bash
+      run: |
+        # Pod Cleanup
+
+        # Login to OpenShift (NOTE: project command is a safeguard)
+        oc login --token=${{ inputs.oc_token }} --server=${{ inputs.oc_server }}
+        oc project ${{ inputs.oc_namespace }}
+
+        # Cleanup completed pods
+        oc delete po --field-selector=status.phase==Succeeded
 
     # Action repo needs to be present for cleanup/tests
     - name: Checkout local repo to make sure action.yml is present

@@ -20,16 +20,16 @@ jobs:
         name: [database, backend, frontend]
         include:
           - name: database
-            file: database/openshift.deploy.yml
+            file: templates/backend.yml
             overwrite: false
           - name: backend
-            file: backend/openshift.deploy.yml
+            file: templates/backend.yml
             overwrite: true
             parameters: -p MIN_REPLICAS=1 -p MAX_REPLICAS=2
             penetration_test: true
             verification_path: /api
           - name: frontend
-            file: frontend/openshift.deploy.yml
+            file: templates/frontend.yml
             overwrite: true
             parameters: -p MIN_REPLICAS=1 -p MAX_REPLICAS=2
             penetration_test: false
@@ -43,7 +43,7 @@ jobs:
           oc_namespace: ${{ vars.OC_NAMESPACE }}
           oc_server: ${{ vars.OC_SERVER }}
           oc_token: ${{ secrets.OC_TOKEN }}
-          overwrite: ${{ matrix.overwrite }}
+          overwrite: ${{ matrix.overwri te }}
           penetration_test: ${{ matrix.penetration_test }}
           parameters:
             -p ZONE=${{ github.event.number }} -p NAME=${{ github.event.repository.name }}

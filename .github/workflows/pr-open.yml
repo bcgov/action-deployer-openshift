@@ -20,7 +20,7 @@ jobs:
         name: [database, backend, frontend]
         include:
           - name: database
-            file: templates/backend.yml
+            file: templates/database.yml
             overwrite: false
           - name: backend
             file: templates/backend.yml

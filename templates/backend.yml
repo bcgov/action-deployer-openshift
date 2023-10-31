@@ -16,9 +16,6 @@ parameters:
   - name: ORG_NAME
     description: Organization name, e.g. bcgov
     value: bcgov
-  - name: COMPONENT_DB_MIGRATION
-    description: Component name for database migrations
-    value: migrations
   - name: IMAGE_TAG
     description: Image tag to use
     value: latest
@@ -64,22 +61,6 @@ objects:
           referencePolicy:
             type: Local
   - apiVersion: v1
-    kind: ImageStream
-    metadata:
-      labels:
-        app: "${NAME}-${ZONE}"
-      name: "${NAME}-${ZONE}-${COMPONENT_DB_MIGRATION}"
-    spec:
-      lookupPolicy:
-        local: false
-      tags:
-        - name: "${IMAGE_TAG}"
-          from:
-            kind: DockerImage
-            name: "${REGISTRY}/${ORG_NAME}/${NAME}/${COMPONENT_DB_MIGRATION}:${ZONE}"
-          referencePolicy:
-            type: Local
-  - apiVersion: v1
     kind: DeploymentConfig
     metadata:
       labels:
@@ -97,14 +78,6 @@ objects:
             from:
               kind: ImageStreamTag
               name: "${NAME}-${ZONE}-${COMPONENT}:${IMAGE_TAG}"
-        - type: ImageChange
-          imageChangeParams:
-            automatic: true
-            containerNames:
-              - "${NAME}-${COMPONENT_DB_MIGRATION}"
-            from:
-              kind: ImageStreamTag
-              name: "${NAME}-${ZONE}-${COMPONENT_DB_MIGRATION}:${IMAGE_TAG}"
       selector:
         deploymentconfig: "${NAME}-${ZONE}-${COMPONENT}"
       strategy:
@@ -167,33 +140,7 @@ objects:
                 initialDelaySeconds: 60
                 periodSeconds: 30
                 timeoutSeconds: 5
-          initContainers:
-            - name: "${NAME}-${COMPONENT_DB_MIGRATION}"
-              image: "${NAME}-${ZONE}-${COMPONENT_DB_MIGRATION}:${IMAGE_TAG}"
-              env:
-                - name: FLYWAY_URL
-                  value: "jdbc:postgresql://${NAME}-${ZONE}-database:5432/${NAME}"
-                - name: FLYWAY_USER
-                  valueFrom:
-                    secretKeyRef:
-                      name: "${NAME}-${ZONE}-database"
-                      key: database-user
-                - name: FLYWAY_PASSWORD
-                  valueFrom:
-                    secretKeyRef:
-                      name: "${NAME}-${ZONE}-database"
-                      key: database-password
-                - name: FLYWAY_BASELINE_ON_MIGRATE
-                  value: "true"
-                - name: FLYWAY_DEFAULT_SCHEMA
-                  value: "USERS"
-              resources:
-                requests:
-                  cpu: "${CPU_REQUEST_INIT}"
-                  memory: "${MEMORY_REQUEST_INIT}"
-                limits:
-                  cpu: "${CPU_LIMIT_INIT}"
-                  memory: "${MEMORY_LIMIT_INIT}"
+
   - apiVersion: v1
     kind: Service
     metadata:

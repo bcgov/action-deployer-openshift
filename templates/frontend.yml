@@ -13,9 +13,9 @@ parameters:
   - name: REGISTRY
     description: Container registry to import from (internal is image-registry.openshift-image-registry.svc:5000)
     value: ghcr.io
-  - name: ORG_NAME
-    description: Organization name, e.g. bcgov
-    value: bcgov
+  - name: PROMOTE
+    description: Image to promote
+    value: ghcr.io/bcgov/quickstart-openshift/frontend:test
   - name: IMAGE_TAG
     description: Image tag to use
     value: latest
@@ -52,7 +52,7 @@ objects:
         - name: "${IMAGE_TAG}"
           from:
             kind: DockerImage
-            name: "${REGISTRY}/${ORG_NAME}/${NAME}/${COMPONENT}:${ZONE}"
+            name: "${PROMOTE}"
           referencePolicy:
             type: Local
   - apiVersion: v1

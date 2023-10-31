@@ -47,6 +47,5 @@ jobs:
           penetration_test: ${{ matrix.penetration_test }}
           parameters:
             -p ZONE=${{ github.event.number }} -p NAME=${{ github.event.repository.name }}
-            -p ORG_NAME=bcgov-nr
             ${{ matrix.parameters }}
           verification_path: ${{ matrix.verification_path }}

@@ -11,42 +11,8 @@ env:
   repo_builds: bcgov/quickstart-openshift
 
 jobs:
-  # https://github.com/bcgov-nr/action-builder-ghcr
-  builds:
-    name: Builds
-    if: "!github.event.pull_request.head.repo.fork"
-    runs-on: ubuntu-22.04
-    permissions:
-      packages: write
-    strategy:
-      matrix:
-        package: [database, migrations, backend, frontend]
-        include:
-          - package: database
-            triggers: ('database/')
-          - package: migrations
-            build_context: ./backend/db
-            triggers: ('backend/db')
-          - package: backend
-            triggers: ('backend/')
-          - package: frontend
-            triggers: ('frontend/')
-    timeout-minutes: 10
-    steps:
-      - uses: bcgov-nr/action-builder-ghcr@v1.3.0
-        with:
-          build_context: ${{ matrix.build_context }}
-          keep_versions: 50
-          package: ${{ matrix.package }}
-          repository: bcgov/quickstart-openshift
-          tag: ${{ github.event.number }}
-          tag_fallback: test
-          token: ${{ secrets.GITHUB_TOKEN }}
-          triggers: ${{ matrix.triggers }}
-
   deploys:
     name: Deploys
-    needs: [builds]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     strategy:
@@ -54,16 +20,16 @@ jobs:
         name: [database, backend, frontend]
         include:
           - name: database
-            file: database/openshift.deploy.yml
+            file: templates/database.yml
             overwrite: false
           - name: backend
-            file: backend/openshift.deploy.yml
+            file: templates/backend.yml
             overwrite: true
             parameters: -p MIN_REPLICAS=1 -p MAX_REPLICAS=2
             penetration_test: true
             verification_path: /api
           - name: frontend
-            file: frontend/openshift.deploy.yml
+            file: templates/frontend.yml
             overwrite: true
             parameters: -p MIN_REPLICAS=1 -p MAX_REPLICAS=2
             penetration_test: false
@@ -81,7 +47,5 @@ jobs:
           penetration_test: ${{ matrix.penetration_test }}
           parameters:
             -p ZONE=${{ github.event.number }} -p NAME=${{ github.event.repository.name }}
-            -p ORG_NAME=bcgov-nr
             ${{ matrix.parameters }}
-          repository: bcgov/quickstart-openshift
           verification_path: ${{ matrix.verification_path }}

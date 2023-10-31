@@ -227,7 +227,7 @@ runs:
       if: steps.vars.outputs.url &&
         ( steps.triggers.outputs.triggered == 'true' )&&
         ( inputs.penetration_test == 'true' )
-      uses: zaproxy/action-full-scan@v0.7.0
+      uses: zaproxy/action-full-scan@v0.8.0
       with:
         allow_issue_writing: "${{ inputs.penetration_test_create_issue }}"
         artifact_name: "zap_${{ inputs.name }}"

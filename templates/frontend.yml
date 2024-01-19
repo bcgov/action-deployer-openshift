@@ -38,6 +38,10 @@ parameters:
   - name: LOG_LEVEL
     description: Caddy logging level DEBUG, INFO, WARN, ERROR, PANIC, and FATAL (https://github.com/caddyserver/caddy/blob/master/logging.go)
     value: "info"
+  - name: CRON_MINUTES
+    description: Random number, 0-60, for scheduling cronjobs
+    from: "[0-5]{1}[0-9]{1}"
+    generate: expression
 objects:
   - apiVersion: v1
     kind: ImageStream
@@ -174,3 +178,30 @@ objects:
             target:
               type: Utilization
               averageUtilization: 100
+  - kind: CronJob
+    apiVersion: batch/v1
+    metadata:
+      labels:
+        app: ${NAME}-${ZONE}
+      name: ${NAME}-${ZONE}-cronjob
+    spec:
+      concurrencyPolicy: Replace
+      schedule: "${CRON_MINUTES} 9 * * * " # Run daily at 9:xx AM UTC
+      jobTemplate:
+        spec:
+          template:
+            metadata:
+              labels:
+                app: ${NAME}-${ZONE}
+                cronjob: ${NAME}-${ZONE}-cronjob
+            spec:
+              restartPolicy: OnFailure
+              containers:
+                - name: ${NAME}-${ZONE}-cronjob
+                  image: "${NAME}-${ZONE}-${COMPONENT}:${IMAGE_TAG}"
+                  imagePullPolicy: Always
+                  args: ["bash -c 'whoami'"]
+                  resources:
+                    requests:
+                      cpu: ${CPU_REQUEST}
+                      memory: ${MEMORY_REQUEST}

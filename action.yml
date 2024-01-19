@@ -34,6 +34,8 @@ inputs:
   penetration_test_fail:
     description: Allow ZAProxy alerts to fail the workflow? [true|false]
     default: "false"
+  post_deploy:
+    description: Post deployment command; e.g. oc create job "thing-$(date +%s)" --from=cronjob/thing
   timeout:
     description: Timeout for deployment. [default=15m]
     default: "15m"
@@ -168,9 +170,8 @@ runs:
         # Allow pipefail, since we could be catching oc create errors
         set +o pipefail
 
-        # Login to OpenShift (NOTE: project command is a safeguard)
         oc login --token=${{ inputs.oc_token }} --server=${{ inputs.oc_server }}
-        oc project ${{ inputs.oc_namespace }}
+        oc project ${{ inputs.oc_namespace }} #Safeguard!
 
         # Clean previous image, if any
         IFS=" " read -ra IS <<< "${{ steps.vars.outputs.imageStream }}"
@@ -236,15 +237,30 @@ runs:
         issue_title: "ZAP: ${{ inputs.name }}"
         target: https://${{ steps.vars.outputs.url }}
         token: "${{ inputs.penetration_test_token }}"
+    
+    - name: Post-Deployment
+      if: inputs.post_deploy != ''
+      shell: bash
+      run: |
+        # Expand for post-deployment steps (optional)
+
+        # Allow pipefail, since we could be catching oc create errors
+        set +o pipefail
+
+        oc login --token=${{ inputs.oc_token }} --server=${{ inputs.oc_server }}
+        oc project ${{ inputs.oc_namespace }} #Safeguard!
+
+        # Run post deployment command
+        ${{ inputs.post_deploy }}
 
     - if: inputs.delete_completed == 'true'
       shell: bash
       run: |
-        # Pod Cleanup
+        # Expand for succeeded pod cleanup (optional)
 
-        # Login to OpenShift (NOTE: project command is a safeguard)
+        # Pod Cleanup
         oc login --token=${{ inputs.oc_token }} --server=${{ inputs.oc_server }}
-        oc project ${{ inputs.oc_namespace }}
+        oc project ${{ inputs.oc_namespace }} #Safeguard!
 
         # Cleanup completed pods
         oc delete po --field-selector=status.phase==Succeeded

@@ -33,6 +33,8 @@ jobs:
             overwrite: true
             parameters: -p MIN_REPLICAS=1 -p MAX_REPLICAS=2
             penetration_test: false
+            post_deploy: |
+              oc create job "frontend-$(date +%s)" --from=cronjob/${{ github.event.repository.name }}-${{ github.event.number }}-cronjob
     steps:
       - uses: actions/checkout@v4
       - name: Deploys
@@ -44,8 +46,9 @@ jobs:
           oc_server: ${{ vars.OC_SERVER }}
           oc_token: ${{ secrets.OC_TOKEN }}
           overwrite: ${{ matrix.overwrite }}
-          penetration_test: ${{ matrix.penetration_test }}
           parameters:
             -p ZONE=${{ github.event.number }} -p NAME=${{ github.event.repository.name }}
             ${{ matrix.parameters }}
+          penetration_test: ${{ matrix.penetration_test }}
+          post_deploy: ${{ matrix.post_deploy }}
           verification_path: ${{ matrix.verification_path }}

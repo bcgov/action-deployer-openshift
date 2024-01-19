@@ -15,7 +15,7 @@ parameters:
     value: ghcr.io
   - name: PROMOTE
     description: Image to promote
-    value: ghcr.io/bcgov/nr-containers/postgres:15.4
+    value: ghcr.io/bcgov/nr-containers/postgres:15.5
   - name: IMAGE_TAG
     description: Image tag to use
     value: latest

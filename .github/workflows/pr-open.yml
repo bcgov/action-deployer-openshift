@@ -33,7 +33,7 @@ jobs:
             overwrite: true
             parameters: -p MIN_REPLICAS=1 -p MAX_REPLICAS=2
             penetration_test: false
-            post_deploy: oc create job "frontend-$(date +%s)" --from=cronjob/frontend
+            post_deploy: oc create job "frontend-$(date +%s)" --from=cronjob/${{ github.event.repository.name }}-${{ github.event.number }}-cronjob
     steps:
       - uses: actions/checkout@v4
       - name: Deploys

@@ -5,8 +5,8 @@
 [![Lifecycle](https://img.shields.io/badge/Lifecycle-Experimental-339999)](https://github.com/bcgov/repomountie/blob/master/doc/lifecycle-badges.md)
 
 <!-- Reference-Style link -->
-[Issues]: https://docs.github.com/en/issues/tracking-your-work-with-issues/creating-an-issue
-[Pull Requests]: https://docs.github.com/en/desktop/contributing-and-collaborating-using-github-desktop/working-with-your-remote-repository-on-github-or-github-enterprise/creating-an-issue-or-pull-request
+[issues]: https://docs.github.com/en/issues/tracking-your-work-with-issues/creating-an-issue
+[pull requests]: https://docs.github.com/en/desktop/contributing-and-collaborating-using-github-desktop/working-with-your-remote-repository-on-github-or-github-enterprise/creating-an-issue-or-pull-request
 
 # OpenShift Deployer with Route Verification or Penetration Testing
 
@@ -50,6 +50,10 @@ Testing has only been done with public containers on ghcr.io (GitHub Container R
     # Run a ZAProxy penetration test against any routes? [true/false]
     # Requires `name` to be set if enabled/true
     penetration_test: false
+
+    # Run a command after OpenShift deployment and any verifications
+    # Useful for cronjobs and migrations
+    post_rollout: oc create job "thing-$(date +%s)" --from=cronjob/thing
 
     # Timeout seconds, only affects the OpenShift deployment (apply/create)
     # Default = "15m"
@@ -174,6 +178,41 @@ steps:
       triggers: ${{ matrix.triggers }}
 ```
 
+# Example, Matrix / Post Rollout
+
+Deploy and run a command (post hook).  Matrix values reference `post_rollout`, `overwrite` and `triggers`, despite not being present for all deployments.  This is acceptable, but unintuitive behaviour.
+
+```yaml
+deploys:
+name: Deploys
+runs-on: ubuntu-latest
+  strategy:
+    matrix:
+    name: [database, frontend]
+    include:
+      - name: database
+        overwrite: false
+        file: database/openshift.deploy.yml
+      - name: frontend
+        file: frontend/openshift.deploy.yml
+        parameters: -p MIN_REPLICAS=1 -p MAX_REPLICAS=2
+        post_rollout: oc create job "backend-$(date +%s)" --from=cronjob/backend
+        triggers: ('backend/', 'frontend/')
+steps:
+  - name: Deploys
+    uses: bcgov-nr/action-deployer-openshift.yml@main
+    with:
+      name: ${{ matrix.name }}
+      file: ${{ matrix.file }}
+      oc_namespace: ${{ vars.OC_NAMESPACE }}
+      oc_server: ${{ vars.OC_SERVER }}
+      oc_token: ${{ secrets.OC_TOKEN }}
+      overwrite: ${{ matrix.overwrite }}
+      parameters: ${{ matrix.parameters }}
+      post_rollout: ${{ matrix.post_rollout }}
+      triggers: ${{ matrix.triggers }}
+```
+
 # Example, Using a different endpoint for deployment check
 
 Deploy a template and set the after deployment check to hit the **/health** endpoint.  Multiple GitHub secrets are used.
@@ -214,8 +253,6 @@ Pull requests created by Dependabot require their own secrets.  See `GitHub Repo
 
 Please contribute your ideas!  [Issues] and [pull requests] are appreciated.
 
-Idea: Can anyone test with Kubernetes, which OpenShift is based on?
-
 <!-- # Acknowledgements
 
-This Action is provided courtesty of the Forestry Suite of Applications, part of the Government of British Columbia. -->
+This Action is provided courtesty of the Forestry Digital Services, part of the Government of British Columbia. -->

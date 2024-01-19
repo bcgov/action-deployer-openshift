@@ -178,9 +178,9 @@ steps:
       triggers: ${{ matrix.triggers }}
 ```
 
-# Example, Matrix / Post Rollout Hook
+# Example, Matrix / Post Rollout
 
-Deploy and run a command (post hook).  Matrix values refernce `post_rollout`, `overwrite` and `triggers`, despite not being present for all deployments.  This is acceptable, but unintuitive behaviour.
+Deploy and run a command (post hook).  Matrix values reference `post_rollout`, `overwrite` and `triggers`, despite not being present for all deployments.  This is acceptable, but unintuitive behaviour.
 
 ```yaml
 deploys:

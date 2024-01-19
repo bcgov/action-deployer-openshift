@@ -34,7 +34,7 @@ inputs:
   penetration_test_fail:
     description: Allow ZAProxy alerts to fail the workflow? [true|false]
     default: "false"
-  post_deploy:
+  post_deploy_hook:
     description: Post deployment command; e.g. oc create job "thing-$(date +%s)" --from=cronjob/thing
   timeout:
     description: Timeout for deployment. [default=15m]
@@ -239,7 +239,7 @@ runs:
         token: "${{ inputs.penetration_test_token }}"
     
     - name: Post-Deployment
-      if: inputs.post_deploy != ''
+      if: inputs.post_deploy_hook != ''
       shell: bash
       run: |
         # Expand for post-deployment steps (optional)
@@ -251,7 +251,7 @@ runs:
         oc project ${{ inputs.oc_namespace }} #Safeguard!
 
         # Run post deployment command
-        ${{ inputs.post_deploy }}
+        ${{ inputs.post_deploy_hook }}
 
     - if: inputs.delete_completed == 'true'
       shell: bash

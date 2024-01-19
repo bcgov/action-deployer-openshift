@@ -237,27 +237,33 @@ runs:
         issue_title: "ZAP: ${{ inputs.name }}"
         target: https://${{ steps.vars.outputs.url }}
         token: "${{ inputs.penetration_test_token }}"
+    
+    - name: Post-Deployment
+      if: inputs.post_deploy != ''
+      shell: bash
+      run: |
+        # Expand for post-deployment steps (optional)
+
+        # Allow pipefail, since we could be catching oc create errors
+        set +o pipefail
+
+        oc login --token=${{ inputs.oc_token }} --server=${{ inputs.oc_server }}
+        oc project ${{ inputs.oc_namespace }} #Safeguard!
+
+        # Run post deployment command
+        ${{ inputs.post_deploy }}
 
     - if: inputs.delete_completed == 'true'
       shell: bash
       run: |
+        # Expand for succeeded pod cleanup (optional)
+
         # Pod Cleanup
         oc login --token=${{ inputs.oc_token }} --server=${{ inputs.oc_server }}
         oc project ${{ inputs.oc_namespace }} #Safeguard!
 
         # Cleanup completed pods
         oc delete po --field-selector=status.phase==Succeeded
-    
-    - name: Post-Deployment
-      if: inputs.post_deploy != ''
-      shell: bash
-      run: |
-        # Post-Deployment
-        oc login --token=${{ inputs.oc_token }} --server=${{ inputs.oc_server }}
-        oc project ${{ inputs.oc_namespace }} #Safeguard!
-
-        # Run post deployment command
-        ${{ inputs.post_deploy }}
 
     # Action repo needs to be present for cleanup/tests
     - name: Checkout local repo to make sure action.yml is present

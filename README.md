@@ -53,7 +53,7 @@ Testing has only been done with public containers on ghcr.io (GitHub Container R
 
     # Run a command after OpenShift deployment and any verifications
     # Useful for cronjobs and migrations
-    post_deploy_hook: oc create job "thing-$(date +%s)" --from=cronjob/thing
+    post_rollout: oc create job "thing-$(date +%s)" --from=cronjob/thing
 
     # Timeout seconds, only affects the OpenShift deployment (apply/create)
     # Default = "15m"
@@ -178,9 +178,9 @@ steps:
       triggers: ${{ matrix.triggers }}
 ```
 
-# Example, Matrix / Post Deploy Hook
+# Example, Matrix / Post Rollout Hook
 
-Deploy and run a follow up command (post deploy hook).  Matrix values refernce `post_deploy_hook`, `overwrite` and `triggers`, despite not being present for all deployments.  This is acceptable, but unintuitive behaviour.
+Deploy and run a command (post hook).  Matrix values refernce `post_rollout`, `overwrite` and `triggers`, despite not being present for all deployments.  This is acceptable, but unintuitive behaviour.
 
 ```yaml
 deploys:
@@ -196,7 +196,7 @@ runs-on: ubuntu-latest
       - name: frontend
         file: frontend/openshift.deploy.yml
         parameters: -p MIN_REPLICAS=1 -p MAX_REPLICAS=2
-        post_deploy_hook: oc create job "backend-$(date +%s)" --from=cronjob/backend
+        post_rollout: oc create job "backend-$(date +%s)" --from=cronjob/backend
         triggers: ('backend/', 'frontend/')
 steps:
   - name: Deploys
@@ -209,7 +209,7 @@ steps:
       oc_token: ${{ secrets.OC_TOKEN }}
       overwrite: ${{ matrix.overwrite }}
       parameters: ${{ matrix.parameters }}
-      post_deploy_hook: ${{ matrix.post_deploy_hook }}
+      post_rollout: ${{ matrix.post_rollout }}
       triggers: ${{ matrix.triggers }}
 ```
 

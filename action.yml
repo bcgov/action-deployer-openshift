@@ -23,6 +23,10 @@ inputs:
     required: true
 
   ### Typical / recommended
+  ms_teams_webhook:
+    description: Microsoft Teams webhook for notifications; omit=skip
+  ms_teams_target:
+    description: Microsoft Teams target/zone for notifications; omit=skip
   name:
     description: Name for any penetration test issues or artifacts; e.g. frontend
     default: "name_unset"
@@ -264,6 +268,15 @@ runs:
 
         # Cleanup completed pods
         oc delete po --field-selector=status.phase==Succeeded
+
+      # https://github.com/simbo/msteams-message-card-action
+      - uses: simbo/msteams-message-card-action@1.4.3
+        if: inputs.ms_teams_webhook != '' && inputs.ms_teams_target != ''
+        with:
+          webhook: ${{ inputs.ms_teams_webhook }}
+          title: "Deploy to ${{ github.repository }}"
+          message: "${{inputs.ms_teams_target }}, ${{ inputs.file }}"
+          color: 'dodger blue'
 
     # Action repo needs to be present for cleanup/tests
     - name: Checkout local repo to make sure action.yml is present

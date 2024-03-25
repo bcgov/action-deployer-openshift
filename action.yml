@@ -26,6 +26,8 @@ inputs:
   name:
     description: Name for any penetration test issues or artifacts; e.g. frontend
     default: "name_unset"
+  oc_version:
+    description: Non-default OpenShift version; e.g. 4.13
   parameters:
     description: Template parameters/variables to pass (e.g. -p ZONE=...)
   penetration_test:
@@ -126,6 +128,18 @@ runs:
           done < <(git diff origin/"${{ inputs.diff_branch }}" --name-only)
         fi
         echo "Triggers not matched, deployment skipped"
+
+    # Override OpenShift version, if specified
+    - name: Override OpenShift version
+      if: ${{ inputs.oc_version }}
+      env:
+        OC: https://mirror.openshift.com/pub/openshift-v4/clients/ocp/stable-${{ inputs.oc_version }}/openshift-client-linux.tar.gz
+      shell: bash
+      working-directory: /usr/local/bin/
+      run: |
+        # Override OpenShift version
+        curl --silent ${{ env.OC }} | tar -xzvf - oc
+        oc version
 
     # Process variables and inputs
     # Remote/override repo is required if one has been specified (input)

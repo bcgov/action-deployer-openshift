@@ -253,7 +253,7 @@ runs:
         token: "${{ inputs.penetration_test_token }}"
     
     - name: Post-Deployment
-      if: inputs.post_rollout != ''
+      if: inputs.post_rollout != '' && steps.triggers.outputs.triggered == 'true'
       shell: bash
       run: |
         # Expand for post-deployment steps (optional)

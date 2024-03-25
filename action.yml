@@ -142,6 +142,10 @@ runs:
 
         wget ${{ env.OC }} -O - | tar -xzvf - oc
         ./oc version
+        cp oc /usr/local/bin/oc
+
+        echo "Replaced?"
+        oc version
 
         # oc login --token=${{ inputs.oc_token }} --server=${{ inputs.oc_server }}
         # oc project ${{ inputs.oc_namespace }} #Safeguard!

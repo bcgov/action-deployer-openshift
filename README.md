@@ -44,6 +44,9 @@ Testing has only been done with public containers on ghcr.io (GitHub Container R
     # Name for any penetration test issues or artifacts
     name: "frontend"
 
+    # Override GitHub default oc version
+    oc_version: "4.13"
+    
     # Template parameters/variables to pass
     parameters: -p ZONE=${{ github.event.number }}
 

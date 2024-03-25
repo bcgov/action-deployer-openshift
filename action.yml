@@ -138,7 +138,7 @@ runs:
       working-directory: /usr/local/bin/
       run: |
         # Override OpenShift version
-        curl ${{ env.OC }} | tar -xzvf - oc
+        curl --silent ${{ env.OC }} | tar -xzvf - oc
         oc version
 
     # Process variables and inputs

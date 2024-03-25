@@ -26,6 +26,8 @@ inputs:
   name:
     description: Name for any penetration test issues or artifacts; e.g. frontend
     default: "name_unset"
+  oc_version:
+    description: Non-default OpenShift version; e.g. 4.13
   parameters:
     description: Template parameters/variables to pass (e.g. -p ZONE=...)
   penetration_test:
@@ -127,145 +129,163 @@ runs:
         fi
         echo "Triggers not matched, deployment skipped"
 
-    # Process variables and inputs
-    # Remote/override repo is required if one has been specified (input)
-    - name: Checkout remote/override repo
-      if: ${{ github.repository }} != ${{ inputs.repository }}
-      uses: actions/checkout@v4
-      with:
-        repository: ${{ inputs.repository }}
-    - id: vars
+    # Override OpenShift version, if specified
+    - name: Override OpenShift version
+      if: ${{ inputs.oc_version }}
+      env:
+        OC: https://mirror.openshift.com/pub/openshift-v4/clients/ocp/stable-${{ inputs.oc_version }}/openshift-client-linux.tar.gz
       shell: bash
       run: |
-        # Expand for inputs and variables
-        set -eu
+        # Override OpenShift version
+        which oc
+        oc version
 
-        # Process template, consuming variables/parameters
-        TEMPLATE="$(oc process -f ${{ inputs.file }} ${{ inputs.parameters }} --local)"
+        wget ${{ env.OC }} -O - | tar -xzvf -c oc
+        ./oc version
 
-        # ImageStream, DeploymentConfig and Route Host from template
-        DC=$(jq -rn "${TEMPLATE} | .items[] | select(.kind==\"DeploymentConfig\").metadata.name //empty")
-        IS=$(jq -rn "${TEMPLATE} | .items[] | select(.kind==\"ImageStream\").metadata.name //empty")
-        echo imageStream=${IS} >> $GITHUB_OUTPUT
-        echo deploymentConfig=${DC} >> $GITHUB_OUTPUT
+        # oc login --token=${{ inputs.oc_token }} --server=${{ inputs.oc_server }}
+        # oc project ${{ inputs.oc_namespace }} #Safeguard!
+        # oc apply -f https://raw.githubusercontent.com/openshift/origin/release-${{ inputs.oc_version }}/api/swagger-spec/openshift-openapi-spec.json
 
-        # Output URL (host + path), but only if ROUTE_HOST is populated
-        ROUTE_HOST=$(jq -rn "${TEMPLATE} | .items[] | select(.kind==\"Route\").spec.host //empty")
-        if [ ! -z ${ROUTE_HOST} ]; then
-          # Path from inputs takes priority over template
-          ROUTE_PATH=${{ inputs.verification_path }}
-          [ ! -z ${ROUTE_PATH} ]|| \
-            ROUTE_PATH=$(jq -rn "${TEMPLATE} | .items[] | select(.kind==\"Route\").spec.path //empty")
+    # # Process variables and inputs
+    # # Remote/override repo is required if one has been specified (input)
+    # - name: Checkout remote/override repo
+    #   if: ${{ github.repository }} != ${{ inputs.repository }}
+    #   uses: actions/checkout@v4
+    #   with:
+    #     repository: ${{ inputs.repository }}
+    # - id: vars
+    #   shell: bash
+    #   run: |
+    #     # Expand for inputs and variables
+    #     set -eu
 
-          # Remove any duplicate slashes and pass to GITHUB_OUTPUT
-          echo url="${ROUTE_HOST}/${ROUTE_PATH}" | sed 's // / g' >> $GITHUB_OUTPUT
-        fi
+    #     # Process template, consuming variables/parameters
+    #     TEMPLATE="$(oc process -f ${{ inputs.file }} ${{ inputs.parameters }} --local)"
 
-    - name: Deploy
-      if: steps.triggers.outputs.triggered == 'true'
-      shell: bash
-      run: |
-        # Expand for deployment steps
+    #     # ImageStream, DeploymentConfig and Route Host from template
+    #     DC=$(jq -rn "${TEMPLATE} | .items[] | select(.kind==\"DeploymentConfig\").metadata.name //empty")
+    #     IS=$(jq -rn "${TEMPLATE} | .items[] | select(.kind==\"ImageStream\").metadata.name //empty")
+    #     echo imageStream=${IS} >> $GITHUB_OUTPUT
+    #     echo deploymentConfig=${DC} >> $GITHUB_OUTPUT
 
-        # Allow pipefail, since we could be catching oc create errors
-        set +o pipefail
+    #     # Output URL (host + path), but only if ROUTE_HOST is populated
+    #     ROUTE_HOST=$(jq -rn "${TEMPLATE} | .items[] | select(.kind==\"Route\").spec.host //empty")
+    #     if [ ! -z ${ROUTE_HOST} ]; then
+    #       # Path from inputs takes priority over template
+    #       ROUTE_PATH=${{ inputs.verification_path }}
+    #       [ ! -z ${ROUTE_PATH} ]|| \
+    #         ROUTE_PATH=$(jq -rn "${TEMPLATE} | .items[] | select(.kind==\"Route\").spec.path //empty")
 
-        oc login --token=${{ inputs.oc_token }} --server=${{ inputs.oc_server }}
-        oc project ${{ inputs.oc_namespace }} #Safeguard!
+    #       # Remove any duplicate slashes and pass to GITHUB_OUTPUT
+    #       echo url="${ROUTE_HOST}/${ROUTE_PATH}" | sed 's // / g' >> $GITHUB_OUTPUT
+    #     fi
 
-        # Clean previous image, if any
-        IFS=" " read -ra IS <<< "${{ steps.vars.outputs.imageStream }}"
-        for i in "${IS[@]}"
-        do
-          [ ! $(oc get is -o name | grep ^imagestream.image.openshift.io/${i}$) ]|| oc delete is/${i}
-        done
+    # - name: Deploy
+    #   if: steps.triggers.outputs.triggered == 'true'
+    #   shell: bash
+    #   run: |
+    #     # Expand for deployment steps
 
-        # Apply (overwrites) or create (does not overwrite) using processed template
-        TEMPLATE="$(oc process -f ${{ inputs.file }} ${{ inputs.parameters }} --local)"
-        if [ "${{ inputs.overwrite }}" == "true" ]; then
-          oc apply --timeout=${{ inputs.timeout }} -f - <<< "${TEMPLATE}"
-        else
-          # Suppress AlreadyExists errors and expected failure
-          oc create -f - 2>&1 <<< "${TEMPLATE}" | sed 's/.*: //'
-        fi
+    #     # Allow pipefail, since we could be catching oc create errors
+    #     set +o pipefail
 
-        # Follow any active rollouts (see deploymentconfigs)
-        DC=${{ steps.vars.outputs.deploymentConfig }}
-        [ -z "${DC}" ]|| oc rollout status dc/${DC} -w
+    #     oc login --token=${{ inputs.oc_token }} --server=${{ inputs.oc_server }}
+    #     oc project ${{ inputs.oc_namespace }} #Safeguard!
 
-    - name: Route Verification
-      if: steps.vars.outputs.url &&
-        ( steps.triggers.outputs.triggered == 'true' )&&
-        ( inputs.penetration_test != 'true' )
-      shell: bash
-      run: |
-        # Expand for route verification
+    #     # Clean previous image, if any
+    #     IFS=" " read -ra IS <<< "${{ steps.vars.outputs.imageStream }}"
+    #     for i in "${IS[@]}"
+    #     do
+    #       [ ! $(oc get is -o name | grep ^imagestream.image.openshift.io/${i}$) ]|| oc delete is/${i}
+    #     done
 
-        # Check for URL (route + path)
-        URL_HOST_PATH=${{ steps.vars.outputs.url }}
-        if [ -z "${URL_HOST_PATH}" ]; then
-          echo "No route found. Skipping."
-          exit 0
-        fi
-        echo -e "URL: ${URL_HOST_PATH}"
+    #     # Apply (overwrites) or create (does not overwrite) using processed template
+    #     TEMPLATE="$(oc process -f ${{ inputs.file }} ${{ inputs.parameters }} --local)"
+    #     if [ "${{ inputs.overwrite }}" == "true" ]; then
+    #       oc apply --timeout=${{ inputs.timeout }} -f - <<< "${TEMPLATE}"
+    #     else
+    #       # Suppress AlreadyExists errors and expected failure
+    #       oc create -f - 2>&1 <<< "${TEMPLATE}" | sed 's/.*: //'
+    #     fi
 
-        # Curl and verify
-        TRIES="${{ inputs.verification_retry_attempts }}"
-        SECONDS="${{ inputs.verification_retry_seconds }}"
-        for (( i=0; i<"${TRIES}"; i++ )); do
-          HTTP_CODE=$(curl -Lso /dev/null -w "%{http_code}" "${URL_HOST_PATH}")
-          if [ "${HTTP_CODE}" -eq 200 ]; then
-            echo -e "Route verification successful!\n"
-            exit 0
-          fi
-          echo -e "HTTP_CODE:${HTTP_CODE}, Try: #${i}"
-          sleep "${SECONDS}"
-        done
-        echo -e "\nRoute verification failed"
-        exit 1
+    #     # Follow any active rollouts (see deploymentconfigs)
+    #     DC=${{ steps.vars.outputs.deploymentConfig }}
+    #     [ -z "${DC}" ]|| oc rollout status dc/${DC} -w
 
-    - name: Penetration Test
-      if: steps.vars.outputs.url &&
-        ( steps.triggers.outputs.triggered == 'true' )&&
-        ( inputs.penetration_test == 'true' )
-      uses: zaproxy/action-full-scan@v0.9.0
-      with:
-        allow_issue_writing: "${{ inputs.penetration_test_create_issue }}"
-        artifact_name: "zap_${{ inputs.name }}"
-        cmd_options: "-a"
-        fail_action: "${{ inputs.penetration_test_fail }}"
-        issue_title: "ZAP: ${{ inputs.name }}"
-        target: https://${{ steps.vars.outputs.url }}
-        token: "${{ inputs.penetration_test_token }}"
+    # - name: Route Verification
+    #   if: steps.vars.outputs.url &&
+    #     ( steps.triggers.outputs.triggered == 'true' )&&
+    #     ( inputs.penetration_test != 'true' )
+    #   shell: bash
+    #   run: |
+    #     # Expand for route verification
+
+    #     # Check for URL (route + path)
+    #     URL_HOST_PATH=${{ steps.vars.outputs.url }}
+    #     if [ -z "${URL_HOST_PATH}" ]; then
+    #       echo "No route found. Skipping."
+    #       exit 0
+    #     fi
+    #     echo -e "URL: ${URL_HOST_PATH}"
+
+    #     # Curl and verify
+    #     TRIES="${{ inputs.verification_retry_attempts }}"
+    #     SECONDS="${{ inputs.verification_retry_seconds }}"
+    #     for (( i=0; i<"${TRIES}"; i++ )); do
+    #       HTTP_CODE=$(curl -Lso /dev/null -w "%{http_code}" "${URL_HOST_PATH}")
+    #       if [ "${HTTP_CODE}" -eq 200 ]; then
+    #         echo -e "Route verification successful!\n"
+    #         exit 0
+    #       fi
+    #       echo -e "HTTP_CODE:${HTTP_CODE}, Try: #${i}"
+    #       sleep "${SECONDS}"
+    #     done
+    #     echo -e "\nRoute verification failed"
+    #     exit 1
+
+    # - name: Penetration Test
+    #   if: steps.vars.outputs.url &&
+    #     ( steps.triggers.outputs.triggered == 'true' )&&
+    #     ( inputs.penetration_test == 'true' )
+    #   uses: zaproxy/action-full-scan@v0.9.0
+    #   with:
+    #     allow_issue_writing: "${{ inputs.penetration_test_create_issue }}"
+    #     artifact_name: "zap_${{ inputs.name }}"
+    #     cmd_options: "-a"
+    #     fail_action: "${{ inputs.penetration_test_fail }}"
+    #     issue_title: "ZAP: ${{ inputs.name }}"
+    #     target: https://${{ steps.vars.outputs.url }}
+    #     token: "${{ inputs.penetration_test_token }}"
     
-    - name: Post-Deployment
-      if: inputs.post_rollout != ''
-      shell: bash
-      run: |
-        # Expand for post-deployment steps (optional)
+    # - name: Post-Deployment
+    #   if: inputs.post_rollout != ''
+    #   shell: bash
+    #   run: |
+    #     # Expand for post-deployment steps (optional)
 
-        # Allow pipefail, since we could be catching oc create errors
-        set +o pipefail
+    #     # Allow pipefail, since we could be catching oc create errors
+    #     set +o pipefail
 
-        oc login --token=${{ inputs.oc_token }} --server=${{ inputs.oc_server }}
-        oc project ${{ inputs.oc_namespace }} #Safeguard!
+    #     oc login --token=${{ inputs.oc_token }} --server=${{ inputs.oc_server }}
+    #     oc project ${{ inputs.oc_namespace }} #Safeguard!
 
-        # Run post deployment command
-        ${{ inputs.post_rollout }}
+    #     # Run post deployment command
+    #     ${{ inputs.post_rollout }}
 
-    - if: inputs.delete_completed == 'true'
-      shell: bash
-      run: |
-        # Expand for succeeded pod cleanup (optional)
+    # - if: inputs.delete_completed == 'true'
+    #   shell: bash
+    #   run: |
+    #     # Expand for succeeded pod cleanup (optional)
 
-        # Pod Cleanup
-        oc login --token=${{ inputs.oc_token }} --server=${{ inputs.oc_server }}
-        oc project ${{ inputs.oc_namespace }} #Safeguard!
+    #     # Pod Cleanup
+    #     oc login --token=${{ inputs.oc_token }} --server=${{ inputs.oc_server }}
+    #     oc project ${{ inputs.oc_namespace }} #Safeguard!
 
-        # Cleanup completed pods
-        oc delete po --field-selector=status.phase==Succeeded
+    #     # Cleanup completed pods
+    #     oc delete po --field-selector=status.phase==Succeeded
 
-    # Action repo needs to be present for cleanup/tests
-    - name: Checkout local repo to make sure action.yml is present
-      if: ${{ github.repository }} != ${{ inputs.repository }}
-      uses: actions/checkout@v4
+    # # Action repo needs to be present for cleanup/tests
+    # - name: Checkout local repo to make sure action.yml is present
+    #   if: ${{ github.repository }} != ${{ inputs.repository }}
+    #   uses: actions/checkout@v4

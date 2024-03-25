@@ -140,7 +140,7 @@ runs:
         which oc
         oc version
 
-        wget ${{ env.OC }} -O - | tar -xzvf -c oc
+        wget ${{ env.OC }} -O - | tar -xzvf - oc
         ./oc version
 
         # oc login --token=${{ inputs.oc_token }} --server=${{ inputs.oc_server }}

@@ -267,7 +267,7 @@ runs:
         # Run post deployment command
         ${{ inputs.post_rollout }}
 
-    - if: inputs.delete_completed == 'true'
+    - if: inputs.delete_completed == 'true' && steps.triggers.outputs.triggered == 'true'
       shell: bash
       run: |
         # Expand for succeeded pod cleanup (optional)

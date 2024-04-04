@@ -15,8 +15,8 @@ jobs:
     name: Database
     runs-on: ubuntu-latest
     timeout-minutes: 1
-    # outputs:
-    #   triggered: ${{ steps.triggered.outputs.triggered }}
+    outputs:
+      triggered: ${{ steps.triggered.outputs.triggered }}
     steps:
       - uses: actions/checkout@v4
       - uses: ./
@@ -30,52 +30,57 @@ jobs:
           overwrite: false
           parameters: -p ZONE=${{ github.event.number }} -p NAME=${{ github.event.repository.name }}
 
-  # backend:
-  #   name: Backend
-  #   runs-on: ubuntu-latest
-  #   timeout-minutes: 5
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #     - uses: ./
-  #       with:
-  #         file: templates/backend.yml
-  #         name: backend
-  #         oc_namespace: ${{ vars.OC_NAMESPACE }}
-  #         oc_server: ${{ vars.OC_SERVER }}
-  #         oc_token: ${{ secrets.OC_TOKEN }}
-  #         overwrite: yes
-  #         parameters:
-  #           -p ZONE=${{ github.event.number }} -p NAME=${{ github.event.repository.name }}
-  #           -p MIN_REPLICAS=1 -p MAX_REPLICAS=2
-  #         penetration_test: true
-  #         verification_path: /api
+  backend:
+    name: Backend
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      triggered: ${{ steps.triggered.outputs.triggered }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./
+        id: triggered
+        with:
+          file: templates/backend.yml
+          name: backend
+          oc_namespace: ${{ vars.OC_NAMESPACE }}
+          oc_server: ${{ vars.OC_SERVER }}
+          oc_token: ${{ secrets.OC_TOKEN }}
+          overwrite: yes
+          parameters:
+            -p ZONE=${{ github.event.number }} -p NAME=${{ github.event.repository.name }}
+            -p MIN_REPLICAS=1 -p MAX_REPLICAS=2
+          penetration_test: true
+          verification_path: /api
 
-  # frontend:
-  #   name: Deploys
-  #   runs-on: ubuntu-latest
-  #   timeout-minutes: 5
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #     - uses: ./
-  #       with:
-  #         file: templates/frontend.yml
-  #         name: frontend
-  #         oc_namespace: ${{ vars.OC_NAMESPACE }}
-  #         oc_server: ${{ vars.OC_SERVER }}
-  #         oc_token: ${{ secrets.OC_TOKEN }}
-  #         oc_version: 4.13
-  #         overwrite: true
-  #         parameters:
-  #           -p ZONE=${{ github.event.number }} -p NAME=${{ github.event.repository.name }}
-  #           -p MIN_REPLICAS=1 -p MAX_REPLICAS=2
-  #         penetration_test: false
-  #         post_rollout: |
-  #           oc create job "frontend-$(date +%s)" --from=cronjob/${{ github.event.repository.name }}-${{ github.event.number }}-cronjob
+  frontend:
+    name: Deploys
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      triggered: ${{ steps.triggered.outputs.triggered }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./
+        id: triggered
+        with:
+          file: templates/frontend.yml
+          name: frontend
+          oc_namespace: ${{ vars.OC_NAMESPACE }}
+          oc_server: ${{ vars.OC_SERVER }}
+          oc_token: ${{ secrets.OC_TOKEN }}
+          oc_version: 4.13
+          overwrite: true
+          parameters:
+            -p ZONE=${{ github.event.number }} -p NAME=${{ github.event.repository.name }}
+            -p MIN_REPLICAS=1 -p MAX_REPLICAS=2
+          penetration_test: false
+          post_rollout: |
+            oc create job "frontend-$(date +%s)" --from=cronjob/${{ github.event.repository.name }}-${{ github.event.number }}-cronjob
 
   results:
     name: Check Results
-    # needs: [database, backend, frontend]
-    needs: [database]
+    needs: [database, backend, frontend]
     runs-on: ubuntu-latest
     timeout-minutes: 1
     steps:

@@ -240,6 +240,20 @@ deploys:
         verification_url: health
 ```
 
+# Output
+
+The action will return a boolean (true|false) of whether a deployment has been triggered.  It can be useful for follow-up tasks, like verifying job success.
+
+```yaml
+- id: meaningful_id_name
+  uses: bcgov-nr/action-deployer-openshift@vX.Y.Z
+  ...
+
+- needs: [id]
+  run: |
+    echo "Triggered = ${{ steps.meaningful_id_name.outputs.triggered }}
+```
+
 # Route Verification vs Penetration Testing
 
 Deployment templates are parsed for a route.  If found, those routes are verified with a curl command for status code 200 (success).  This ensures that applications are accessible from outside their OpenShift namespace/project.

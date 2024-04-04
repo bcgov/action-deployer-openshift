@@ -54,3 +54,13 @@ jobs:
           penetration_test: ${{ matrix.penetration_test }}
           post_rollout: ${{ matrix.post_rollout }}
           verification_path: ${{ matrix.verification_path }}
+
+  results:
+    name: Check Results
+    needs: [deploys]
+    runs-on: ubuntu-latest
+    timeout-minutes: 1
+    steps:
+      - run: |
+          echo "Results? ${{ needs.deploys.outputs.* }}"
+

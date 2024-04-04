@@ -42,6 +42,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Deploys
+        id: deploys
         uses: ./
         with:
           file: ${{ matrix.file }}
@@ -59,7 +60,7 @@ jobs:
       - name: Triggered
         id: is_triggered
         run: |
-         echo "${{ matrix.name }}.triggered=${{ steps.triggered.outputs.triggered }}" >> $GITHUB_OUTPUT
+         echo "${{ matrix.name }}.triggered=${{ steps.deploys.outputs.triggered }}" >> $GITHUB_OUTPUT
 
 
   results:

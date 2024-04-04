@@ -15,8 +15,8 @@ jobs:
     name: Database
     runs-on: ubuntu-latest
     timeout-minutes: 1
-    outputs:
-      triggered: ${{ steps.triggered.outputs.triggered }}
+    # outputs:
+    #   triggered: ${{ steps.triggered.outputs.triggered }}
     steps:
       - uses: actions/checkout@v4
       - uses: ./

@@ -41,7 +41,9 @@ jobs:
           oc_server: ${{ vars.OC_SERVER }}
           oc_token: ${{ secrets.OC_TOKEN }}
           overwrite: yes
-          parameters: -p MIN_REPLICAS=1 -p MAX_REPLICAS=2
+          parameters:
+            -p ZONE=${{ github.event.number }} -p NAME=${{ github.event.repository.name }}
+            -p MIN_REPLICAS=1 -p MAX_REPLICAS=2
           penetration_test: true
           verification_path: /api
 

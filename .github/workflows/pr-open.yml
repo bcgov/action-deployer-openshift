@@ -7,42 +7,38 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-env:
-  repo_builds: bcgov/quickstart-openshift
-
 jobs:
-  deployments:
+  deploys:
+    env:
+      CRONJOB: ${{ github.event.repository.name }}-${{ github.event.number }}-cronjob
     runs-on: ubuntu-latest
     timeout-minutes: 10
     outputs:
-      backend_triggered: ${{ steps.is_triggered.outputs.backend_triggered }}
-      frontend_triggered: ${{ steps.is_triggered.outputs.frontend_triggered }}
-      database_triggered: ${{ steps.is_triggered.outputs.database_triggered }}
+      backend: ${{ steps.trigger.outputs.backend }}
+      database: ${{ steps.trigger.outputs.database }}
+      frontend: ${{ steps.trigger.outputs.frontend }}
     strategy:
       matrix:
-        name: [ database, backend, frontend ]
+        name: [ backend, database, frontend ]
         include:
-          - name: database
-            file: templates/database.yml
-            overwrite: false
           - name: backend
             file: templates/backend.yml
             overwrite: true
             parameters: -p MIN_REPLICAS=1 -p MAX_REPLICAS=2
-            penetration_test: false
             verification_path: /api
+          - name: database
+            file: templates/database.yml
+            overwrite: false
           - name: frontend
             file: templates/frontend.yml
             oc_version: 4.13
             overwrite: true
             parameters: -p MIN_REPLICAS=1 -p MAX_REPLICAS=2
-            penetration_test: false
             post_rollout: |
-              oc create job "frontend-$(date +%s)" --from=cronjob/${{ github.event.repository.name }}-${{ github.event.number }}-cronjob
+              oc create job "frontend-$(date +%s)" --from=cronjob/${{ env.CRONJOB }}
     steps:
       - uses: actions/checkout@v4
-      - name: Deploys
-        id: deploys
+      - id: deploys
         uses: ./
         with:
           file: ${{ matrix.file }}
@@ -57,20 +53,16 @@ jobs:
           penetration_test: ${{ matrix.penetration_test }}
           post_rollout: ${{ matrix.post_rollout }}
           verification_path: ${{ matrix.verification_path }}
-      - name: Triggered
-        id: is_triggered
-        run: |
-         echo "${{ matrix.name }}_triggered=${{ steps.deploys.outputs.triggered }}" >> $GITHUB_OUTPUT
-
+      - id: trigger
+        run: echo "${{ matrix.name }}=${{ steps.deploys.outputs.triggered }}" >> $GITHUB_OUTPUT
 
   results:
+    name: Results
     runs-on: ubuntu-latest
-    needs: [deployments]
+    needs: [deploys]
     steps:
-      - uses: actions/checkout@v4
-      - name: Results
-        run: |
-          echo "results: ${{ toJson(needs.deploys) }}"
-          echo "Database triggered: ${{needs.deployments.outputs.database_triggered}}"
-          echo "Backend triggered: ${{needs.deployments.outputs.backend_triggered}}"
-          echo "Frontend triggered: ${{needs.deployments.outputs.frontend_triggered}}"
+      - run: |
+          echo "Results: ${{ toJson(needs.deploys.outputs) }}"
+          echo "Database triggered: ${{needs.deploys.outputs.database}}"
+          echo "Backend triggered: ${{needs.deploys.outputs.backend}}"
+          echo "Frontend triggered: ${{needs.deploys.outputs.frontend}}"

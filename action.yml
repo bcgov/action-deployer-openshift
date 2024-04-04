@@ -100,34 +100,13 @@ runs:
           exit 1
         fi
 
-    # Current/calling repo is required for diff/triggers
-    - uses: actions/checkout@v4
-    - id: triggers
-      shell: bash
-      run: |
-        # Process triggers
-        set -eu
+    # Send triggers to diff action
+    - id: diff
+      uses: bcgov-nr/action-diff-triggers@v0.2.0
+      with:
+        triggers: ${{ inputs.triggers }}
+        diff_branch: ${{ inputs.diff_branch }}
 
-        # Triggers
-        TRIGGERS=${{ inputs.triggers }}
-        if [ -z "${TRIGGERS}" ]; then
-          echo "Triggers omitted, deployment required"
-          echo "triggered=true" >> $GITHUB_OUTPUT
-          exit 0
-        else
-          echo "Processing triggers"
-          git fetch origin "${{ inputs.diff_branch }}"
-          while read -r check; do
-            for t in "${TRIGGERS[@]}"; do
-              if [[ "${check}" =~ "${t}" ]]; then
-                  echo -e "Triggered: ${t}\n --> ${check}"
-                  echo "triggered=true" >> $GITHUB_OUTPUT
-                  exit 0
-              fi
-            done
-          done < <(git diff origin/"${{ inputs.diff_branch }}" --name-only)
-        fi
-        echo "Triggers not matched, deployment skipped"
 
     # Override OpenShift version, if specified
     - name: Override OpenShift version
@@ -176,7 +155,7 @@ runs:
         fi
 
     - name: Deploy
-      if: steps.triggers.outputs.triggered == 'true'
+      if: steps.diff.outputs.triggered == 'true'
       shell: bash
       run: |
         # Expand for deployment steps
@@ -209,7 +188,7 @@ runs:
 
     - name: Route Verification
       if: steps.vars.outputs.url &&
-        ( steps.triggers.outputs.triggered == 'true' )&&
+        ( steps.diff.outputs.triggered == 'true' )&&
         ( inputs.penetration_test != 'true' )
       shell: bash
       run: |
@@ -240,7 +219,7 @@ runs:
 
     - name: Penetration Test
       if: steps.vars.outputs.url &&
-        ( steps.triggers.outputs.triggered == 'true' )&&
+        ( steps.diff.outputs.triggered == 'true' )&&
         ( inputs.penetration_test == 'true' )
       uses: zaproxy/action-full-scan@v0.9.0
       with:
@@ -253,7 +232,7 @@ runs:
         token: "${{ inputs.penetration_test_token }}"
     
     - name: Post-Deployment
-      if: inputs.post_rollout != '' && steps.triggers.outputs.triggered == 'true'
+      if: inputs.post_rollout != '' && steps.diff.outputs.triggered == 'true'
       shell: bash
       run: |
         # Expand for post-deployment steps (optional)
@@ -267,7 +246,7 @@ runs:
         # Run post deployment command
         ${{ inputs.post_rollout }}
 
-    - if: inputs.delete_completed == 'true' && steps.triggers.outputs.triggered == 'true'
+    - if: inputs.delete_completed == 'true' && steps.diff.outputs.triggered == 'true'
       shell: bash
       run: |
         # Expand for succeeded pod cleanup (optional)

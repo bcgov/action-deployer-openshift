@@ -59,7 +59,7 @@ jobs:
       - name: Triggered
         id: is_triggered
         run: |
-         echo "${{matrix.name}}.triggered = ${{steps.diff.outputs.triggered}}" >> $GITHUB_OUTPUT
+         echo "${{ matrix.name }}.triggered=${{ steps.triggered.outputs.triggered }}" >> $GITHUB_OUTPUT
 
 
   results:

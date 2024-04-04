@@ -62,5 +62,5 @@ jobs:
     timeout-minutes: 1
     steps:
       - run: |
-          echo "Results? ${{ toJson(needs.deploys.outputs.*) }}"
+          echo "Results? ${{ toJson(needs.deploys) }}"
 

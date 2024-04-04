@@ -1,4 +1,4 @@
-name: Pull Request
+name: PR
 
 on:
   pull_request:
@@ -79,7 +79,7 @@ jobs:
             oc create job "frontend-$(date +%s)" --from=cronjob/${{ github.event.repository.name }}-${{ github.event.number }}-cronjob
 
   results:
-    name: Check Results
+    name: Results
     needs: [database, backend, frontend]
     runs-on: ubuntu-latest
     timeout-minutes: 1

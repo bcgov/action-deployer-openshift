@@ -60,6 +60,7 @@ jobs:
     needs: [deploys]
     steps:
       - run: |
+          # Expand for outputs
           echo "Results: ${{ toJson(needs.deploys.outputs) }}"
           echo "Database triggered: ${{needs.deploys.outputs.database}}"
           echo "Backend triggered: ${{needs.deploys.outputs.backend}}"

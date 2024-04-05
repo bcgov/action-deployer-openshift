@@ -9,8 +9,6 @@ concurrency:
 
 jobs:
   deploys:
-    env:
-      CRONJOB: ${{ github.event.repository.name }}-${{ github.event.number }}-cronjob
     runs-on: ubuntu-latest
     timeout-minutes: 10
     outputs:
@@ -35,7 +33,7 @@ jobs:
             overwrite: true
             parameters: -p MIN_REPLICAS=1 -p MAX_REPLICAS=2
             post_rollout: |
-              oc create job "frontend-$(date +%s)" --from=cronjob/${{ env.CRONJOB }}
+              oc create job "frontend-$(date +%s)" --from=cronjob/${{ github.event.repository.name }}-${{ github.event.number }}-cronjob
     steps:
       - uses: actions/checkout@v4
       - id: deploys

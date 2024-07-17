@@ -22,7 +22,6 @@ jobs:
           - name: backend
             file: templates/backend.yml
             overwrite: true
-            parameters: -p MIN_REPLICAS=1 -p MAX_REPLICAS=2
             verification_path: /api
           - name: database
             file: templates/database.yml
@@ -31,7 +30,6 @@ jobs:
           #   file: templates/frontend.yml
           #   oc_version: 4.13
           #   overwrite: true
-          #   parameters: -p MIN_REPLICAS=1 -p MAX_REPLICAS=2
           #   post_rollout: |
           #     oc create job "frontend-$(date +%s)" --from=cronjob/${{ github.event.repository.name }}-${{ github.event.number }}-cronjob
     steps:

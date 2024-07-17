@@ -28,12 +28,6 @@ parameters:
     value: "250m"
   - name: MEMORY_LIMIT_INIT
     value: "250Mi"
-  - name: MIN_REPLICAS
-    description: The minimum amount of replicas for the horizontal pod autoscaler.
-    value: "3"
-  - name: MAX_REPLICAS
-    description: The maximum amount of replicas for the horizontal pod autoscaler.
-    value: "5"
 objects:
   - kind: Deployment
     apiVersion: apps/v1
@@ -146,8 +140,8 @@ objects:
         apiVersion: apps.openshift.io/v1
         kind: DeploymentConfig
         name: "${NAME}-${ZONE}-${COMPONENT}"
-      minReplicas: "${{MIN_REPLICAS}}"
-      maxReplicas: "${{MAX_REPLICAS}}"
+      minReplicas: "1"
+      maxReplicas: "2"
       metrics:
         - type: Resource
           resource:

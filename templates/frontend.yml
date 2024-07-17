@@ -3,7 +3,7 @@ kind: Template
 parameters:
   - name: NAME
     description: Module name
-    required: true
+    value: action-deployer-openshift
   - name: COMPONENT
     description: Component name
     value: frontend
@@ -169,8 +169,8 @@ objects:
         apiVersion: apps.openshift.io/v1
         kind: DeploymentConfig
         name: "${NAME}-${ZONE}-${COMPONENT}"
-      minReplicas: "${{MIN_REPLICAS}}"
-      maxReplicas: "${{MAX_REPLICAS}}"
+      minReplicas: "1"
+      maxReplicas: "2"
       metrics:
         - type: Resource
           resource:

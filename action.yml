@@ -162,7 +162,7 @@ runs:
         oc login --token=${{ inputs.oc_token }} --server=${{ inputs.oc_server }}
         oc project ${{ inputs.oc_namespace }} #Safeguard!
 
-        # Clean previous image, if any
+        # Clean any previous ImageStreams
         IFS=" " read -ra IS <<< "${{ steps.vars.outputs.imageStream }}"
         for i in "${IS[@]}"
         do
@@ -178,9 +178,13 @@ runs:
           oc create -f - 2>&1 <<< "${TEMPLATE}" | sed 's/.*: //'
         fi
 
-        # Follow any active rollouts
+        # Follow any active rollouts; temporary support for DeploymentConfigs
         DDC=${{ steps.vars.outputs.deployment }}
-        [ -z "${DDC}" ]|| oc rollout status deployment/${DDC} -w || oc rollout status dc/${DDC} -w
+        if [ ! -z "${DDC}" ]&&[ $(oc get deployment/${DDC} 2>/dev/null) ]; then
+          oc rollout status deployment/${DDC} -w
+        elif [ ! -z "${DDC}" ]; then
+          oc rollout status deploymentconfig/${DDC} -w
+        fi
 
     - name: Route Verification
       if: steps.vars.outputs.url &&

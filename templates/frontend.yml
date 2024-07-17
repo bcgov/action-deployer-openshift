@@ -169,8 +169,8 @@ objects:
         apiVersion: apps.openshift.io/v1
         kind: DeploymentConfig
         name: "${NAME}-${ZONE}-${COMPONENT}"
-      minReplicas: "1"
-      maxReplicas: "2"
+      minReplicas: 1
+      maxReplicas: 2
       metrics:
         - type: Resource
           resource:

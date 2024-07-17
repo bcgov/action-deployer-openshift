@@ -180,12 +180,12 @@ runs:
 
         # Follow any active rollouts; temporary support for DeploymentConfigs
         DDC=${{ steps.vars.outputs.deployment }}
-        if [ ! -z "${DDC}" ]&&[ $(oc get deployment/${DDC} 2>/dev/null) ]; then
+        if [ ! -z "${DDC}" ]&&[ ! -z $(oc get deployment ${DDC} -o name --ignore-not-found) ]; then
           oc rollout status deployment/${DDC} -w
-        elif [ ! -z "${DDC}" ]; then
+        elif [ ! -z "${DDC}" ]&&[ ! -z $(oc get deploymentconfig ${DDC} -o name --ignore-not-found) ]; then
           oc rollout status deploymentconfig/${DDC} -w
         fi
-
+        
     - name: Route Verification
       if: steps.vars.outputs.url &&
         ( steps.diff.outputs.triggered == 'true' )

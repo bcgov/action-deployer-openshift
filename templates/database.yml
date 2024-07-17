@@ -10,15 +10,15 @@ parameters:
   - name: ZONE
     description: Deployment zone, e.g. pr-### or prod
     required: true
+  - name: TAG
+    description: Image tag; e.g. PR number, latest or prod
+    required: true
+  - name: ORG_NAME
+    description: Organization name
+    value: bcgov
   - name: REGISTRY
     description: Container registry to import from (internal is image-registry.openshift-image-registry.svc:5000)
     value: ghcr.io
-  - name: PROMOTE
-    description: Image to promote
-    value: ghcr.io/bcgov/nr-containers/postgres:15.5
-  - name: IMAGE_TAG
-    description: Image tag to use
-    value: latest
   - name: PVC_MOUNT_PATH
     description: Where to mount the PVC, subpath (e.g. data/)
     value: /var/lib/postgresql
@@ -27,9 +27,6 @@ parameters:
     displayName: Database Volume Capacity
     required: true
     value: 256Mi
-  - name: REGISTRY
-    description: Container registry to import from (internal is image-registry.openshift-image-registry.svc:5000)
-    value: ghcr.io
   - name: PG_DATABASE
     description: Postgres database name
     value: database
@@ -89,22 +86,6 @@ objects:
         requests:
           storage: "${DB_PVC_SIZE}"
       storageClassName: netapp-file-standard
-  - kind: ImageStream
-    apiVersion: v1
-    metadata:
-      name: "${NAME}-${ZONE}-${COMPONENT}"
-      labels:
-        app: "${NAME}-${ZONE}"
-    spec:
-      lookupPolicy:
-        local: false
-      tags:
-        - name: "${IMAGE_TAG}"
-          from:
-            kind: DockerImage
-            name: "${PROMOTE}"
-          referencePolicy:
-            type: Local
   - kind: Deployment
     apiVersion: apps/v1
     metadata:
@@ -134,7 +115,7 @@ objects:
                 claimName: "${NAME}-${ZONE}-${COMPONENT}"
           containers:
             - name: "${NAME}"
-              image: "${NAME}-${ZONE}-${COMPONENT}:${IMAGE_TAG}"
+              image: ${REGISTRY}/${ORG_NAME}/${NAME}/${COMPONENT}:${TAG}
               ports:
                 - containerPort: 5432
                   protocol: TCP

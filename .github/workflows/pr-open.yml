@@ -17,7 +17,7 @@ jobs:
       frontend: ${{ steps.trigger.outputs.frontend }}
     strategy:
       matrix:
-        # name: [ backend, database, frontend ]
+        name: [ backend, database, frontend ]
         include:
           - name: backend
             file: templates/backend.yml
@@ -26,12 +26,12 @@ jobs:
           - name: database
             file: templates/database.yml
             overwrite: false
-          # - name: frontend
-          #   file: templates/frontend.yml
-          #   oc_version: 4.13
-          #   overwrite: true
-          #   post_rollout: |
-          #     oc create job "frontend-$(date +%s)" --from=cronjob/${{ github.event.repository.name }}-${{ github.event.number }}-cronjob
+          - name: frontend
+            file: templates/frontend.yml
+            oc_version: 4.13
+            overwrite: true
+            post_rollout: |
+              oc create job "frontend-$(date +%s)" --from=cronjob/${{ github.event.repository.name }}-${{ github.event.number }}-cronjob
     steps:
       - uses: actions/checkout@v4
       - id: deploys
@@ -43,8 +43,7 @@ jobs:
           oc_token: ${{ secrets.OC_TOKEN }}
           oc_version: ${{ matrix.oc_version }}
           overwrite: ${{ matrix.overwrite }}
-          parameters: -p ZONE=${{ github.event.number }}
-            ${{ matrix.parameters }}
+          parameters: -p ZONE=${{ github.event.number }} ${{ matrix.parameters }}
           post_rollout: ${{ matrix.post_rollout }}
           verification_path: ${{ matrix.verification_path }}
       - id: trigger

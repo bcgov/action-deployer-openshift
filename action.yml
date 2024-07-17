@@ -59,11 +59,12 @@ inputs:
   ### Deprecated
   # All penetration tests have been deprecated in favour of scheduled jobs or even workflow_dispatch
   penetration_test:
-  penetration_test_fail:
-  penetration_test_create_issue:
-  penetration_test_token:
-  penetration_test_artifact:
-  penetration_test_issue:
+    default: ''
+  # penetration_test_fail:
+  # penetration_test_create_issue:
+  # penetration_test_token:
+  # penetration_test_artifact:
+  # penetration_test_issue:
 
 outputs:
   triggered:

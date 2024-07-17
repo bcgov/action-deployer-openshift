@@ -59,7 +59,7 @@ inputs:
   ### Deprecated
   # All penetration tests have been deprecated in favour of scheduled jobs
   penetration_test:
-    default: ''
+    default: false
   # penetration_test_fail:
   # penetration_test_create_issue:
   # penetration_test_token:
@@ -89,7 +89,7 @@ runs:
         fi
 
         # Deprecation notices
-        if [ ! -z ${{ inputs.penetration_test }} ]; then
+        if [ ! -z ${{ inputs.penetration_test }} != "false" ]; then
           echo -e "All penetration testing has been deprecated.  Instead we recommend running in a scheduled job. \n"
           echo -e "Please see https://github.com/zaproxy/action-full-scan for the source action.\n"
           echo -e "An example of a scheduled job with ZAP penetration testing can be found here:"

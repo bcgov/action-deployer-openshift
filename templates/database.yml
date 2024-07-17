@@ -15,7 +15,7 @@ parameters:
     required: true
   - name: ORG_NAME
     description: Organization name
-    value: bcgov
+    value: bcgov-nr
   - name: REGISTRY
     description: Container registry to import from (internal is image-registry.openshift-image-registry.svc:5000)
     value: ghcr.io

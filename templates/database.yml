@@ -3,36 +3,20 @@ kind: Template
 parameters:
   - name: NAME
     description: Module name
-    required: true
+    value: action-deployer-openshift
   - name: COMPONENT
     description: Component name
     value: database
   - name: ZONE
     description: Deployment zone, e.g. pr-### or prod
     required: true
-  - name: REGISTRY
-    description: Container registry to import from (internal is image-registry.openshift-image-registry.svc:5000)
-    value: ghcr.io
-  - name: PROMOTE
-    description: Image to promote
-    value: ghcr.io/bcgov/nr-containers/postgres:15.5
-  - name: IMAGE_TAG
-    description: Image tag to use
-    value: latest
   - name: PVC_MOUNT_PATH
     description: Where to mount the PVC, subpath (e.g. data/)
     value: /var/lib/postgresql
   - name: DB_PVC_SIZE
     description: Volume space available for data, e.g. 512Mi, 2Gi.
-    displayName: Database Volume Capacity
     required: true
     value: 256Mi
-  - name: REGISTRY
-    description: Container registry to import from (internal is image-registry.openshift-image-registry.svc:5000)
-    value: ghcr.io
-  - name: PG_DATABASE
-    description: Postgres database name
-    value: database
   - name: DB_PASSWORD
     description: Password for the PostgreSQL connection user.
     from: "[a-zA-Z0-9]{16}"
@@ -41,7 +25,7 @@ objects:
   - apiVersion: v1
     kind: Secret
     metadata:
-      name: "${NAME}-${ZONE}-${PG_DATABASE}"
+      name: "${NAME}-${ZONE}-${COMPONENT}"
       labels:
         app: "${NAME}-${ZONE}"
     stringData:
@@ -89,42 +73,17 @@ objects:
         requests:
           storage: "${DB_PVC_SIZE}"
       storageClassName: netapp-file-standard
-  - kind: ImageStream
-    apiVersion: v1
-    metadata:
-      name: "${NAME}-${ZONE}-${COMPONENT}"
-      labels:
-        app: "${NAME}-${ZONE}"
-    spec:
-      lookupPolicy:
-        local: false
-      tags:
-        - name: "${IMAGE_TAG}"
-          from:
-            kind: DockerImage
-            name: "${PROMOTE}"
-          referencePolicy:
-            type: Local
-  - kind: DeploymentConfig
-    apiVersion: v1
+  - kind: Deployment
+    apiVersion: apps/v1
     metadata:
       name: "${NAME}-${ZONE}-${COMPONENT}"
       labels:
         app: "${NAME}-${ZONE}"
     spec:
       replicas: 1
-      triggers:
-        - type: ConfigChange
-        - type: ImageChange
-          imageChangeParams:
-            automatic: true
-            containerNames:
-              - "${NAME}"
-            from:
-              kind: ImageStreamTag
-              name: "${NAME}-${ZONE}-${COMPONENT}:${IMAGE_TAG}"
       selector:
-        deploymentconfig: "${NAME}-${ZONE}-${COMPONENT}"
+        matchLabels:
+          deployment: "${NAME}-${ZONE}-${COMPONENT}"
       strategy:
         type: Recreate
         recreateParams:
@@ -135,7 +94,7 @@ objects:
           name: "${NAME}-${ZONE}-${COMPONENT}"
           labels:
             app: "${NAME}-${ZONE}"
-            deploymentconfig: "${NAME}-${ZONE}-${COMPONENT}"
+            deployment: "${NAME}-${ZONE}-${COMPONENT}"
         spec:
           volumes:
             - name: "${NAME}-${ZONE}-${COMPONENT}"
@@ -143,7 +102,7 @@ objects:
                 claimName: "${NAME}-${ZONE}-${COMPONENT}"
           containers:
             - name: "${NAME}"
-              image: "${NAME}-${ZONE}-${COMPONENT}:${IMAGE_TAG}"
+              image: ghcr.io/bcgov/nr-containers/postgres:12.19
               ports:
                 - containerPort: 5432
                   protocol: TCP
@@ -209,6 +168,6 @@ objects:
           protocol: TCP
           targetPort: 5432
       selector:
-        deploymentconfig: "${NAME}-${ZONE}-${COMPONENT}"
+        deployment: "${NAME}-${ZONE}-${COMPONENT}"
       sessionAffinity: None
       type: ClusterIP

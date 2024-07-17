@@ -3,22 +3,13 @@ kind: Template
 parameters:
   - name: NAME
     description: Module name
-    required: true
+    value: action-deployer-openshift
   - name: COMPONENT
     description: Component name
     value: backend
   - name: ZONE
     description: Deployment zone, e.g. pr-### or prod
     required: true
-  - name: REGISTRY
-    description: Container registry to import from (internal is image-registry.openshift-image-registry.svc:5000)
-    value: ghcr.io
-  - name: PROMOTE
-    description: Image to promote
-    value: ghcr.io/bcgov/quickstart-openshift/backend:latest
-  - name: IMAGE_TAG
-    description: Image tag to use
-    value: latest
   - name: DOMAIN
     value: apps.silver.devops.gov.bc.ca
   - name: CPU_REQUEST
@@ -37,59 +28,28 @@ parameters:
     value: "250m"
   - name: MEMORY_LIMIT_INIT
     value: "250Mi"
-  - name: MIN_REPLICAS
-    description: The minimum amount of replicas for the horizontal pod autoscaler.
-    value: "3"
-  - name: MAX_REPLICAS
-    description: The maximum amount of replicas for the horizontal pod autoscaler.
-    value: "5"
 objects:
-  - apiVersion: v1
-    kind: ImageStream
-    metadata:
-      labels:
-        app: "${NAME}-${ZONE}"
-      name: "${NAME}-${ZONE}-${COMPONENT}"
-    spec:
-      lookupPolicy:
-        local: false
-      tags:
-        - name: "${IMAGE_TAG}"
-          from:
-            kind: DockerImage
-            name: "${PROMOTE}"
-          referencePolicy:
-            type: Local
-  - apiVersion: v1
-    kind: DeploymentConfig
+  - kind: Deployment
+    apiVersion: apps/v1
     metadata:
       labels:
         app: "${NAME}-${ZONE}"
       name: "${NAME}-${ZONE}-${COMPONENT}"
     spec:
       replicas: 1
-      triggers:
-        - type: ConfigChange
-        - type: ImageChange
-          imageChangeParams:
-            automatic: true
-            containerNames:
-              - "${NAME}"
-            from:
-              kind: ImageStreamTag
-              name: "${NAME}-${ZONE}-${COMPONENT}:${IMAGE_TAG}"
       selector:
-        deploymentconfig: "${NAME}-${ZONE}-${COMPONENT}"
+        matchLabels:
+          deployment: "${NAME}-${ZONE}-${COMPONENT}"
       strategy:
-        type: Rolling
+        type: RollingUpdate
       template:
         metadata:
           labels:
             app: "${NAME}-${ZONE}"
-            deploymentconfig: "${NAME}-${ZONE}-${COMPONENT}"
+            deployment: "${NAME}-${ZONE}-${COMPONENT}"
         spec:
           containers:
-            - image: "${NAME}-${ZONE}-${COMPONENT}:${IMAGE_TAG}"
+            - image: "ghcr.io/bcgov/quickstart-openshift/backend:latest"
               imagePullPolicy: Always
               name: "${NAME}"
               env:
@@ -140,7 +100,6 @@ objects:
                 initialDelaySeconds: 60
                 periodSeconds: 30
                 timeoutSeconds: 5
-
   - apiVersion: v1
     kind: Service
     metadata:
@@ -154,7 +113,7 @@ objects:
           port: 80
           targetPort: 3000
       selector:
-        deploymentconfig: "${NAME}-${ZONE}-${COMPONENT}"
+        deployment: "${NAME}-${ZONE}-${COMPONENT}"
   - apiVersion: route.openshift.io/v1
     kind: Route
     metadata:
@@ -181,8 +140,8 @@ objects:
         apiVersion: apps.openshift.io/v1
         kind: DeploymentConfig
         name: "${NAME}-${ZONE}-${COMPONENT}"
-      minReplicas: "${{MIN_REPLICAS}}"
-      maxReplicas: "${{MAX_REPLICAS}}"
+      minReplicas: 1
+      maxReplicas: 2
       metrics:
         - type: Resource
           resource:

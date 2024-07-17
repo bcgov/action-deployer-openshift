@@ -1,5 +1,5 @@
 name: OpenShift Deployer
-description: OpenShift deployer with route verification or penetration testing
+description: OpenShift deployer with route verification
 branding:
   icon: package
   color: blue

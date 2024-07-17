@@ -8,9 +8,9 @@
 [issues]: https://docs.github.com/en/issues/tracking-your-work-with-issues/creating-an-issue
 [pull requests]: https://docs.github.com/en/desktop/contributing-and-collaborating-using-github-desktop/working-with-your-remote-repository-on-github-or-github-enterprise/creating-an-issue-or-pull-request
 
-# OpenShift Deployer with Route Verification or Penetration Testing
+# OpenShift Deployer with Route Verification
 
-GitHub Action. Deploy to OpenShift using templates. Runs route verification or penetration tests.  Most of the heavy lifting here is done in template configuration.
+GitHub Action. Deploy to OpenShift using templates. Runs route verification.  Most of the heavy lifting here is done in template configuration.
 
 Testing has only been done with public containers on ghcr.io (GitHub Container Registry) so far.
 
@@ -41,18 +41,11 @@ Testing has only been done with public containers on ghcr.io (GitHub Container R
 
     ### Typical / recommended
 
-    # Name for any penetration test issues or artifacts
-    name: "frontend"
-
     # Override GitHub default oc version
     oc_version: "4.13"
     
     # Template parameters/variables to pass
     parameters: -p ZONE=${{ github.event.number }}
-
-    # Run a ZAProxy penetration test against any routes? [true/false]
-    # Requires `name` to be set if enabled/true
-    penetration_test: false
 
     # Run a command after OpenShift deployment and any verifications
     # Useful for cronjobs and migrations
@@ -91,26 +84,16 @@ Testing has only been done with public containers on ghcr.io (GitHub Container R
     # Useful for consuming other repos, defaults to the current one
     repository: ${{ github.repository }}
 
-    # Create an issue for penetration test results? [true|false]
-    # Default = "true"
-    penetration_test_create_issue: "true"
-
-    # Allow ZAProxy alerts to fail the workflow? [true/false]
-    # Warning: annoying!
-    penetration_test_fail: false
-
-    # Specify GITHUB_TOKEN or Personal Access Token (PAT) for issue writing
-    # Defaults to inheriting from the calling workflow
-    penetration_test_token: ${{ github.token }}
-
-
     ### Deprecated / will fail and provide directions
 
-    # Replaced by `name` param
-    penetration_test_artifact: frontend
-
-    # # Replaced by `name` param
-    penetration_test_issue: frontend
+    # All penetration tests have been deprecated in favour of scheduled jobs or even workflow_dispatch
+    # Please see https://github.com/zaproxy/action-full-scan for the source of the upstream action
+    penetration_test:
+    penetration_test_artifact:
+    penetration_test_create_issue:
+    penetration_test_fail:
+    penetration_test_issue:
+    penetration_test_token:
 ```
 
 # Example, Single Template
@@ -138,7 +121,7 @@ deploys:
 
 # Example, Matrix / Multiple Templates
 
-Deploy multiple templates in parallel.  This time penetration tests are enabled and issues created.  Runs on pull requests (PRs).
+Deploy multiple templates in parallel.  Runs on pull requests (PRs).
 
 ```yaml
 deploys:
@@ -177,7 +160,6 @@ steps:
       parameters:
         -p COMMON_TEMPLATE_VAR=whatever-${{ github.event.number }}
         ${{ matrix.parameters }}
-      penetration_test: true
       triggers: ${{ matrix.triggers }}
 ```
 
@@ -254,11 +236,9 @@ The action will return a boolean (true|false) of whether a deployment has been t
     echo "Triggered = ${{ steps.meaningful_id_name.outputs.triggered }}
 ```
 
-# Route Verification vs Penetration Testing
+# Route Verification
 
 Deployment templates are parsed for a route.  If found, those routes are verified with a curl command for status code 200 (success).  This ensures that applications are accessible from outside their OpenShift namespace/project.
-
-Provide `penetration_test: true` to instead run a penetration test using [OWASP ZAP (Zed Attack Proxy)](https://github.com/zaproxy/action-full-scan) against that route. `penetration_test_fail: false` can be used to fail pipelines where problems are found.  `penetration_test_issue: name` creates or comments on issues and is generally preferable over failing pipelines.
 
 # Troubleshooting
 

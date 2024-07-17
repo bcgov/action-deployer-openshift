@@ -1,5 +1,5 @@
 name: OpenShift Deployer
-description: OpenShift deployer with route verification or penetration testing
+description: OpenShift deployer with route verification
 branding:
   icon: package
   color: blue
@@ -23,19 +23,10 @@ inputs:
     required: true
 
   ### Typical / recommended
-  name:
-    description: Name for any penetration test issues or artifacts; e.g. frontend
-    default: "name_unset"
   oc_version:
     description: Non-default OpenShift version; e.g. 4.13
   parameters:
     description: Template parameters/variables to pass (e.g. -p ZONE=...)
-  penetration_test:
-    description: Run a ZAProxy penetration test against any routes? [true|false]
-    default: "false"
-  penetration_test_fail:
-    description: Allow ZAProxy alerts to fail the workflow? [true|false]
-    default: "false"
   post_rollout:
     description: Post deployment command; e.g. oc create job "thing-$(date +%s)" --from=cronjob/thing
   timeout:
@@ -57,12 +48,7 @@ inputs:
   repository:
     description: Optionally, specify a different repo to clone
     default: ${{ github.repository }}
-  penetration_test_create_issue:
-    description: Create an issue with penetration test results?  [true|false]
-    default: "true"
-  penetration_test_token:
-    description: Specify token (GH or PAT), instead of inheriting one from the calling workflow
-    default: ${{ github.token }}
+
   verification_retry_attempts:
     description: Number of times to attempt deployment verification
     default: "3"
@@ -71,10 +57,14 @@ inputs:
     default: "10"
 
   ### Deprecated
-  penetration_test_artifact:
-    description: Provide a name to attach ZAProxy scan artifacts to workflows; e.g. frontend, backend
-  penetration_test_issue:
-    description: Provide a name to enable ZAProxy issue creation; e.g. frontend, backend
+  # All penetration tests have been deprecated in favour of scheduled jobs
+  penetration_test:
+    default: ''
+  # penetration_test_fail:
+  # penetration_test_create_issue:
+  # penetration_test_token:
+  # penetration_test_artifact:
+  # penetration_test_issue:
 
 outputs:
   triggered:
@@ -99,9 +89,11 @@ runs:
         fi
 
         # Deprecation notices
-        if [ ! -z ${{ inputs.penetration_test_artifact }} ]||[ ! -z ${{ inputs.penetration_test_issue }} ]; then
-          echo -e "Params penetration_test_artifact and penetration_test_issue have been deprecated. \n"
-          echo -e "Please use param: name instead.  Exiting.\n"
+        if [ ! -z ${{ inputs.penetration_test }} ]; then
+          echo -e "All penetration testing has been deprecated.  Instead we recommend running in a scheduled job. \n"
+          echo -e "Please see https://github.com/zaproxy/action-full-scan for the source action.\n"
+          echo -e "An example of a scheduled job with ZAP penetration testing can be found here:"
+          echo -e "  => https://github.com/bcgov/quickstart-openshift/blob/main/.github/workflows/scheduled.yml\n"
           exit 1
         fi
 
@@ -111,7 +103,6 @@ runs:
       with:
         triggers: ${{ inputs.triggers }}
         diff_branch: ${{ inputs.diff_branch }}
-
 
     # Override OpenShift version, if specified
     - name: Override OpenShift version
@@ -193,8 +184,7 @@ runs:
 
     - name: Route Verification
       if: steps.vars.outputs.url &&
-        ( steps.diff.outputs.triggered == 'true' )&&
-        ( inputs.penetration_test != 'true' )
+        ( steps.diff.outputs.triggered == 'true' )
       shell: bash
       run: |
         # Expand for route verification
@@ -221,20 +211,6 @@ runs:
         done
         echo -e "\nRoute verification failed"
         exit 1
-
-    - name: Penetration Test
-      if: steps.vars.outputs.url &&
-        ( steps.diff.outputs.triggered == 'true' )&&
-        ( inputs.penetration_test == 'true' )
-      uses: zaproxy/action-full-scan@v0.10.0
-      with:
-        allow_issue_writing: "${{ inputs.penetration_test_create_issue }}"
-        artifact_name: "zap_${{ inputs.name }}"
-        cmd_options: "-a"
-        fail_action: "${{ inputs.penetration_test_fail }}"
-        issue_title: "ZAP: ${{ inputs.name }}"
-        target: https://${{ steps.vars.outputs.url }}
-        token: "${{ inputs.penetration_test_token }}"
     
     - name: Post-Deployment
       if: inputs.post_rollout != '' && steps.diff.outputs.triggered == 'true'

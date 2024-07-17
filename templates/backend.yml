@@ -10,15 +10,6 @@ parameters:
   - name: ZONE
     description: Deployment zone, e.g. pr-### or prod
     required: true
-  - name: REGISTRY
-    description: Container registry to import from (internal is image-registry.openshift-image-registry.svc:5000)
-    value: ghcr.io
-  - name: PROMOTE
-    description: Image to promote
-    value: ghcr.io/bcgov/quickstart-openshift/backend:latest
-  - name: IMAGE_TAG
-    description: Image tag to use
-    value: latest
   - name: DOMAIN
     value: apps.silver.devops.gov.bc.ca
   - name: CPU_REQUEST
@@ -56,7 +47,7 @@ objects:
         matchLabels:
           deployment: "${NAME}-${ZONE}-${COMPONENT}"
       strategy:
-        type: Rolling
+        type: RollingUpdate
       template:
         metadata:
           labels:

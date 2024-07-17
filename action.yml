@@ -35,7 +35,7 @@ inputs:
   triggers:
     description: Omit to always build, otherwise trigger by path; e.g. ('./backend/', './frontend/)
   verification_path:
-    description: Sets the health endpoint to be used during check stage, does not require the '/' at the begining
+    description: Sets the health endpoint to be used for verification, does not need '/'
     default: ""
 
   ### Usually a bad idea / not recommended
@@ -132,11 +132,11 @@ runs:
         # Process template, consuming variables/parameters
         TEMPLATE="$(oc process -f ${{ inputs.file }} ${{ inputs.parameters }} --local)"
 
-        # ImageStream, DeploymentConfig and Route Host from template
-        DC=$(jq -rn "${TEMPLATE} | .items[] | select(.kind==\"DeploymentConfig\").metadata.name //empty")
+        # ImageStream, Deployment and Route Host from template (note: DeploymentConfig is deprecated, but still supported)
+        DDC=$(jq -rn "${TEMPLATE} | .items[] | select([.kind] | inside([\"Deployment\", \"DeploymentConfig\"])).metadata.name //empty")
         IS=$(jq -rn "${TEMPLATE} | .items[] | select(.kind==\"ImageStream\").metadata.name //empty")
         echo imageStream=${IS} >> $GITHUB_OUTPUT
-        echo deploymentConfig=${DC} >> $GITHUB_OUTPUT
+        echo deployment=${DDC} >> $GITHUB_OUTPUT
 
         # Output URL (host + path), but only if ROUTE_HOST is populated
         ROUTE_HOST=$(jq -rn "${TEMPLATE} | .items[] | select(.kind==\"Route\").spec.host //empty")
@@ -178,9 +178,9 @@ runs:
           oc create -f - 2>&1 <<< "${TEMPLATE}" | sed 's/.*: //'
         fi
 
-        # Follow any active rollouts (see deploymentconfigs)
-        DC=${{ steps.vars.outputs.deploymentConfig }}
-        [ -z "${DC}" ]|| oc rollout status dc/${DC} -w
+        # Follow any active rollouts
+        DDC=${{ steps.vars.outputs.deployment }}
+        [ -z "${DDC}" ]|| oc rollout status deployment/${DDC} -w || oc rollout status dc/${DDC} -w
 
     - name: Route Verification
       if: steps.vars.outputs.url &&

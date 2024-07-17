@@ -181,7 +181,7 @@ runs:
         # Follow any active rollouts; temporary support for DeploymentConfigs
         DDC=${{ steps.vars.outputs.deployment }}
         if [ ! -z "${DDC}" ]&&[ ! -z $(oc get deployment ${DDC} -o name --ignore-not-found) ]; then
-          oc rollout restart deployment/${DDC}
+          # oc rollout restart deployment/${DDC}
           oc rollout status deployment/${DDC} -w
         elif [ ! -z "${DDC}" ]&&[ ! -z $(oc get deploymentconfig ${DDC} -o name --ignore-not-found) ]; then
           oc rollout status deploymentconfig/${DDC} -w

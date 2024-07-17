@@ -19,11 +19,11 @@ jobs:
       matrix:
         # name: [ backend, database, frontend ]
         include:
-          # - name: backend
-          #   file: templates/backend.yml
-          #   overwrite: true
-          #   parameters: -p MIN_REPLICAS=1 -p MAX_REPLICAS=2
-          #   verification_path: /api
+          - name: backend
+            file: templates/backend.yml
+            overwrite: true
+            parameters: -p MIN_REPLICAS=1 -p MAX_REPLICAS=2
+            verification_path: /api
           - name: database
             file: templates/database.yml
             overwrite: false

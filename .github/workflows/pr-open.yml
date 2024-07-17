@@ -48,7 +48,7 @@ jobs:
           overwrite: ${{ matrix.overwrite }}
           parameters: -p ZONE=${{ github.event.number }} -p NAME=${{ github.event.repository.name }}
             ${{ matrix.parameters }}
-          penetration_test: ${{ matrix.penetration_test }}
+          penetration_test: true
           post_rollout: ${{ matrix.post_rollout }}
           verification_path: ${{ matrix.verification_path }}
       - id: trigger

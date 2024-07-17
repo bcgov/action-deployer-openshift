@@ -205,11 +205,11 @@ runs:
           echo "No route found. Skipping."
           exit 0
         fi
-        echo -e "URL: ${URL_HOST_PATH}"
+        echo -e "URL: http://${URL_HOST_PATH}"
 
         # Curl and verify
-        TRIES="${{ inputs.verification_retry_attempts }}"
-        SECONDS="${{ inputs.verification_retry_seconds }}"
+        TRIES="${{ inputs.verification_retry_attempts }} || 3"
+        SECONDS="${{ inputs.verification_retry_seconds }} || 10"
         for (( i=0; i<"${TRIES}"; i++ )); do
           HTTP_CODE=$(curl -Lso /dev/null -w "%{http_code}" "${URL_HOST_PATH}")
           if [ "${HTTP_CODE}" -eq 200 ]; then

@@ -112,8 +112,8 @@ runs:
       shell: bash
       working-directory: /usr/local/bin/
       run: |
-        # Override OpenShift version
-        curl --silent ${{ env.OC }} | tar -xzvf - oc
+        # Override default OpenShift version (retry, resume)
+        (wget ${{ env.OC }} -qcO - | tar -xzvf - oc)|| !!
         oc version
 
     # Process variables and inputs

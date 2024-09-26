@@ -25,6 +25,7 @@ inputs:
   ### Typical / recommended
   oc_version:
     description: Non-default OpenShift version; e.g. 4.13
+    default: "4.13"
   parameters:
     description: Template parameters/variables to pass (e.g. -p ZONE=...)
   post_rollout:
@@ -105,16 +106,10 @@ runs:
         diff_branch: ${{ inputs.diff_branch }}
 
     # Override OpenShift version, if specified
-    - name: Override OpenShift version
-      if: ${{ inputs.oc_version }}
-      env:
-        OC: https://mirror.openshift.com/pub/openshift-v4/clients/ocp/stable-${{ inputs.oc_version }}/openshift-client-linux.tar.gz
-      shell: bash
-      working-directory: /usr/local/bin/
-      run: |
-        # Override default OpenShift version (retry, resume)
-        (wget ${{ env.OC }} -qcO - | tar -xzvf - oc)|| !!
-        oc version
+    - name: Install CLI tools from OpenShift Mirror
+      uses: redhat-actions/openshift-tools-installer@v1
+      with:
+        oc: ${{ inputs.oc_version }}
 
     # Process variables and inputs
     # Remote/override repo is required if one has been specified (input)

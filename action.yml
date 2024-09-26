@@ -109,7 +109,7 @@ runs:
       uses: redhat-actions/openshift-tools-installer@v1
       with:        
         kam: "latest"
-        oc: "4"
+        oc: ${{ inputs.oc_version || '4' }}
         odo: "3.9"
 
     # Process variables and inputs

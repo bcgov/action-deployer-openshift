@@ -109,7 +109,7 @@ runs:
     - name: Install CLI tools from OpenShift Mirror
       uses: redhat-actions/openshift-tools-installer@v1
       with:
-        ocp: ${{ inputs.oc_version }}
+        oc: ${{ inputs.oc_version }}
 
     # Process variables and inputs
     # Remote/override repo is required if one has been specified (input)

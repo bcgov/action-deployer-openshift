@@ -103,7 +103,7 @@ Deploy a single template.  Multiple GitHub secrets are used.
 ```yaml
 deploys:
   name: Deploys
-  runs-on: ubuntu-latest
+  runs-on: ubuntu-24.04
   steps:
     - name: Deploys
       uses: bcgov-nr/action-deployer-openshift.yml@main
@@ -126,7 +126,7 @@ Deploy multiple templates in parallel.  Runs on pull requests (PRs).
 ```yaml
 deploys:
 name: Deploys
-runs-on: ubuntu-latest
+runs-on: ubuntu-24.04
   strategy:
     matrix:
     name: [backend, database, frontend, init]
@@ -170,7 +170,7 @@ Deploy and run a command (post hook).  Matrix values reference `post_rollout`, `
 ```yaml
 deploys:
 name: Deploys
-runs-on: ubuntu-latest
+runs-on: ubuntu-24.04
   strategy:
     matrix:
     name: [database, frontend]
@@ -205,7 +205,7 @@ Deploy a template and set the after deployment check to hit the **/health** endp
 ```yaml
 deploys:
   name: Deploys
-  runs-on: ubuntu-latest
+  runs-on: ubuntu-24.04
   steps:
     - name: Deploys
       uses: bcgov-nr/action-deployer-openshift.yml@main

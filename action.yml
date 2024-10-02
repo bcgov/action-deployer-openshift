@@ -107,10 +107,8 @@ runs:
     # Override OpenShift version, if specified
     - name: Install CLI tools from OpenShift Mirror
       uses: redhat-actions/openshift-tools-installer@v1
-      with:        
-        kam: "latest"
+      with:
         oc: ${{ inputs.oc_version || '4' }}
-        odo: "3.9"
 
     # Process variables and inputs
     # Remote/override repo is required if one has been specified (input)

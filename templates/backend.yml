@@ -28,6 +28,10 @@ parameters:
     value: "250m"
   - name: MEMORY_LIMIT_INIT
     value: "250Mi"
+  - name: RANDOM_EXPRESSION
+    description: Random expression to make sure deployments update
+    from: "[a-zA-Z0-9]{32}"
+    generate: expression
 objects:
   - kind: Deployment
     apiVersion: apps/v1
@@ -70,6 +74,8 @@ objects:
                     secretKeyRef:
                       name: "${NAME}-${ZONE}-database"
                       key: database-user
+                - name: RANDOM_EXPRESSION
+                  value: ${RANDOM_EXPRESSION}
               ports:
                 - containerPort: 3000
                   protocol: TCP
@@ -138,7 +144,7 @@ objects:
     spec:
       scaleTargetRef:
         apiVersion: apps.openshift.io/v1
-        kind: DeploymentConfig
+        kind: Deployment
         name: "${NAME}-${ZONE}-${COMPONENT}"
       minReplicas: 1
       maxReplicas: 2

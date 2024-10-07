@@ -27,26 +27,29 @@ parameters:
     description: Random number, 0-60, for scheduling cronjobs
     from: "[0-5]{1}[0-9]{1}"
     generate: expression
+  - name: RANDOM_EXPRESSION
+    description: Random expression to make sure deployments update
+    from: "[a-zA-Z0-9]{32}"
+    generate: expression
 objects:
-  - apiVersion: v1
-    kind: DeploymentConfig
+  - kind: Deployment
+    apiVersion: apps/v1
     metadata:
       labels:
         app: "${NAME}-${ZONE}"
       name: "${NAME}-${ZONE}-${COMPONENT}"
     spec:
       replicas: 1
-      triggers:
-        - type: ConfigChange
       selector:
-        deploymentconfig: "${NAME}-${ZONE}-${COMPONENT}"
+        matchLabels:
+          deployment: "${NAME}-${ZONE}-${COMPONENT}"
       strategy:
-        type: Rolling
+        type: RollingUpdate
       template:
         metadata:
           labels:
             app: "${NAME}-${ZONE}"
-            deploymentconfig: "${NAME}-${ZONE}-${COMPONENT}"
+            deployment: "${NAME}-${ZONE}-${COMPONENT}"
         spec:
           containers:
             - image: "ghcr.io/bcgov/quickstart-openshift/frontend:latest"
@@ -60,6 +63,8 @@ objects:
                   value: "https://${NAME}-${ZONE}-backend.${DOMAIN}:443"
                 - name: LOG_LEVEL
                   value: "${LOG_LEVEL}"
+                - name: RANDOM_EXPRESSION
+                  value: ${RANDOM_EXPRESSION}
               ports:
                 - containerPort: 3000
                   protocol: TCP
@@ -103,7 +108,7 @@ objects:
           port: 80
           targetPort: 3000
       selector:
-        deploymentconfig: "${NAME}-${ZONE}-${COMPONENT}"
+        deployment: "${NAME}-${ZONE}-${COMPONENT}"
   - apiVersion: route.openshift.io/v1
     kind: Route
     metadata:
@@ -128,7 +133,7 @@ objects:
     spec:
       scaleTargetRef:
         apiVersion: apps.openshift.io/v1
-        kind: DeploymentConfig
+        kind: Deployment
         name: "${NAME}-${ZONE}-${COMPONENT}"
       minReplicas: 1
       maxReplicas: 2

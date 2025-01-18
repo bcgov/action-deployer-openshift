@@ -99,13 +99,14 @@ runs:
 
     # Send triggers to diff action
     - id: diff
-      uses: bcgov-nr/action-diff-triggers@v0.2.0
+      uses: bcgov/action-diff-triggers@v0.2.0
       with:
         triggers: ${{ inputs.triggers }}
         diff_branch: ${{ inputs.diff_branch }}
 
     # Override OpenShift version, if specified
     - name: Install CLI tools from OpenShift Mirror
+      if: steps.diff.outputs.triggered == 'true'
       uses: redhat-actions/openshift-tools-installer@v1
       with:
         oc: ${{ inputs.oc_version || '4' }}
@@ -182,8 +183,7 @@ runs:
         fi
         
     - name: Route Verification
-      if: steps.vars.outputs.url &&
-        ( steps.diff.outputs.triggered == 'true' )
+      if: steps.vars.outputs.url != '' && steps.diff.outputs.triggered == 'true'
       shell: bash
       run: |
         # Expand for route verification

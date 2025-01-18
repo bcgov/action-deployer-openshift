@@ -1,7 +1,7 @@
 <!-- Badges -->
-[![Issues](https://img.shields.io/github/issues/bcgov-nr/action-deployer-openshift)](/../../issues)
-[![Pull Requests](https://img.shields.io/github/issues-pr/bcgov-nr/action-deployer-openshift)](/../../pulls)
-[![Apache 2.0 License](https://img.shields.io/github/license/bcgov-nr/action-deployer-openshift.svg)](/LICENSE)
+[![Issues](https://img.shields.io/github/issues/bcgov/action-deployer-openshift)](/../../issues)
+[![Pull Requests](https://img.shields.io/github/issues-pr/bcgov/action-deployer-openshift)](/../../pulls)
+[![Apache 2.0 License](https://img.shields.io/github/license/bcgov/action-deployer-openshift.svg)](/LICENSE)
 [![Lifecycle](https://img.shields.io/badge/Lifecycle-Experimental-339999)](https://github.com/bcgov/repomountie/blob/master/doc/lifecycle-badges.md)
 
 <!-- Reference-Style link -->
@@ -17,7 +17,7 @@ Testing has only been done with public containers on ghcr.io (GitHub Container R
 # Usage
 
 ```yaml
-- uses: bcgov-nr/action-deployer-openshift@main
+- uses: bcgov/action-deployer-openshift@main
   with:
     ### Required
 
@@ -106,7 +106,7 @@ deploys:
   runs-on: ubuntu-24.04
   steps:
     - name: Deploys
-      uses: bcgov-nr/action-deployer-openshift.yml@main
+      uses: bcgov/action-deployer-openshift.yml@main
       with:
         file: frontend/openshift.deploy.yml
         oc_namespace: ${{ vars.OC_NAMESPACE }}
@@ -149,7 +149,7 @@ runs-on: ubuntu-24.04
         file: common/openshift.init.yml
 steps:
   - name: Deploys
-    uses: bcgov-nr/action-deployer-openshift.yml@main
+    uses: bcgov/action-deployer-openshift.yml@main
     with:
       name: ${{ matrix.name }}
       file: ${{ matrix.file }}
@@ -185,7 +185,7 @@ runs-on: ubuntu-24.04
         triggers: ('backend/', 'frontend/')
 steps:
   - name: Deploys
-    uses: bcgov-nr/action-deployer-openshift.yml@main
+    uses: bcgov/action-deployer-openshift.yml@main
     with:
       name: ${{ matrix.name }}
       file: ${{ matrix.file }}
@@ -208,7 +208,7 @@ deploys:
   runs-on: ubuntu-24.04
   steps:
     - name: Deploys
-      uses: bcgov-nr/action-deployer-openshift.yml@main
+      uses: bcgov/action-deployer-openshift.yml@main
       with:
         file: backend/openshift.deploy.yml
         oc_namespace: ${{ vars.OC_NAMESPACE }}
@@ -228,7 +228,7 @@ The action will return a boolean (true|false) of whether a deployment has been t
 
 ```yaml
 - id: meaningful_id_name
-  uses: bcgov-nr/action-deployer-openshift@vX.Y.Z
+  uses: bcgov/action-deployer-openshift@vX.Y.Z
   ...
 
 - needs: [id]

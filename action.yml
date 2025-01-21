@@ -146,47 +146,39 @@ runs:
 
     - name: Deploy
       if: steps.diff.outputs.triggered == 'true'
-      shell: bash
-      run: |
-        # Expand for deployment steps
+      uses: bcgov/action-oc-runner@v0.2.0
+      with:
+        oc_namespace: ${{ vars.oc_namespace }}
+        oc_token: ${{ secrets.oc_token }}
+        oc_server: ${{ vars.oc_server }}
+        commands: |
+          # Clean any previous ImageStreams
+          IFS=" " read -ra IS <<< "${{ steps.vars.outputs.imageStream }}"
+          for i in "${IS[@]}"; do
+            [ ! $(oc get is -o name | grep ^imagestream.image.openshift.io/${i}$) ]|| oc delete is/${i}
+          done
 
-        # Allow pipefail, since we could be catching oc create errors
-        set +o pipefail
+          # Apply (overwrites) or create (does not overwrite) using processed template
+          TEMPLATE="$(oc process -f ${{ inputs.file }} ${{ inputs.parameters }} --local)"
+          if [ "${{ inputs.overwrite }}" == "true" ]; then
+            oc apply --timeout=${{ inputs.timeout || '15m' }} -f - <<< "${TEMPLATE}"
+          else
+            # Suppress AlreadyExists errors and expected failure
+            oc create -f - 2>&1 <<< "${TEMPLATE}" | sed 's/.*: //'
+          fi
 
-        oc login --token=${{ inputs.oc_token }} --server=${{ inputs.oc_server }}
-        oc project ${{ inputs.oc_namespace }} #Safeguard!
-
-        # Clean any previous ImageStreams
-        IFS=" " read -ra IS <<< "${{ steps.vars.outputs.imageStream }}"
-        for i in "${IS[@]}"
-        do
-          [ ! $(oc get is -o name | grep ^imagestream.image.openshift.io/${i}$) ]|| oc delete is/${i}
-        done
-
-        # Apply (overwrites) or create (does not overwrite) using processed template
-        TEMPLATE="$(oc process -f ${{ inputs.file }} ${{ inputs.parameters }} --local)"
-        if [ "${{ inputs.overwrite }}" == "true" ]; then
-          oc apply --timeout=${{ inputs.timeout || '15m' }} -f - <<< "${TEMPLATE}"
-        else
-          # Suppress AlreadyExists errors and expected failure
-          oc create -f - 2>&1 <<< "${TEMPLATE}" | sed 's/.*: //'
-        fi
-
-        # Follow any active rollouts; temporary support for DeploymentConfigs
-        DDC=${{ steps.vars.outputs.deployment }}
-        if [ ! -z "${DDC}" ]&&[ ! -z $(oc get deployment ${DDC} -o name --ignore-not-found) ]; then
-          # oc rollout restart deployment/${DDC}
-          oc rollout status deployment/${DDC} -w
-        elif [ ! -z "${DDC}" ]&&[ ! -z $(oc get deploymentconfig ${DDC} -o name --ignore-not-found) ]; then
-          oc rollout status deploymentconfig/${DDC} -w
-        fi
+          # Follow any active rollouts; temporary support for DeploymentConfigs
+          DDC=${{ steps.vars.outputs.deployment }}
+          if [ ! -z "${DDC}" ]&&[ ! -z $(oc get deployment ${DDC} -o name --ignore-not-found) ]; then
+            oc rollout status deployment/${DDC} -w
+          elif [ ! -z "${DDC}" ]&&[ ! -z $(oc get deploymentconfig ${DDC} -o name --ignore-not-found) ]; then
+            oc rollout status deploymentconfig/${DDC} -w
+          fi
         
-    - name: Route Verification
-      if: steps.vars.outputs.url &&
-        ( steps.diff.outputs.triggered == 'true' )
+    - if: steps.vars.outputs.url && steps.diff.outputs.triggered == 'true'
       shell: bash
       run: |
-        # Expand for route verification
+        # Route verification
 
         # Check for URL (route + path)
         URL_HOST_PATH=${{ steps.vars.outputs.url }}
@@ -210,33 +202,28 @@ runs:
         done
         echo -e "\nRoute verification failed"
         exit 1
-    
-    - name: Post-Deployment
-      if: inputs.post_rollout != '' && steps.diff.outputs.triggered == 'true'
-      shell: bash
-      run: |
-        # Expand for post-deployment steps (optional)
 
-        # Allow pipefail, since we could be catching oc create errors
-        set +o pipefail
-
-        oc login --token=${{ inputs.oc_token }} --server=${{ inputs.oc_server }}
-        oc project ${{ inputs.oc_namespace }} #Safeguard!
-
-        # Run post deployment command
-        ${{ inputs.post_rollout }}
+    - if: inputs.post_rollout != '' && steps.diff.outputs.triggered == 'true'
+      uses: bcgov/action-oc-runner@v0.2.0
+      with:
+        oc_namespace: ${{ vars.oc_namespace }}
+        oc_token: ${{ secrets.oc_token }}
+        oc_server: ${{ vars.oc_server }}
+        commands: |
+          # Run post deployment command
+          ${{ inputs.post_rollout }}
 
     - if: inputs.delete_completed == 'true' && steps.diff.outputs.triggered == 'true'
-      shell: bash
-      run: |
-        # Expand for succeeded pod cleanup (optional)
+      uses: bcgov/action-oc-runner@v0.2.0
+      with:
+        oc_namespace: ${{ vars.oc_namespace }}
+        oc_token: ${{ secrets.oc_token }}
+        oc_server: ${{ vars.oc_server }}
+        commands: |
+          # Expand for succeeded pod cleanup (optional)
 
-        # Pod Cleanup
-        oc login --token=${{ inputs.oc_token }} --server=${{ inputs.oc_server }}
-        oc project ${{ inputs.oc_namespace }} #Safeguard!
-
-        # Cleanup completed pods
-        oc delete po --field-selector=status.phase==Succeeded
+          # Cleanup completed pods
+          oc delete po --field-selector=status.phase==Succeeded
 
     # Action repo needs to be present for cleanup/tests
     - name: Checkout local repo to make sure action.yml is present

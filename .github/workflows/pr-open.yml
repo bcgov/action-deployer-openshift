@@ -24,10 +24,12 @@ jobs:
           - name: backend
             file: templates/backend.yml
             overwrite: true
+            repository: ${{ github.repository }}
             verification_path: /api
-          - name: database
-            file: templates/database.yml
+          - name: db
+            file: db/openshift.deploy.yml
             overwrite: false
+            repository: bcgov/nr-fom
           - name: frontend
             file: templates/frontend.yml
             oc_version: 4.13
@@ -47,6 +49,7 @@ jobs:
           overwrite: ${{ matrix.overwrite }}
           parameters: -p ZONE=${{ github.event.number }} ${{ matrix.parameters }}
           post_rollout: ${{ matrix.post_rollout }}
+          repository: ${{ matrix.repository }}
           verification_path: ${{ matrix.verification_path }}
       - id: trigger
         run: echo "${{ matrix.name }}=${{ steps.deploys.outputs.triggered }}" >> $GITHUB_OUTPUT

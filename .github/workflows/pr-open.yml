@@ -29,7 +29,7 @@ jobs:
           - name: db
             file: db/openshift.deploy.yml
             overwrite: false
-            parameters: -p NAME=${{ github.event.repository.name }} -p TAG=${{ github.event.number }}
+            parameters: -p NAME=${{ github.event.repository.name }} -p TAG=prod
             repository: bcgov/nr-fom
           - name: frontend
             file: templates/frontend.yml

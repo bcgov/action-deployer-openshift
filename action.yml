@@ -69,7 +69,7 @@ inputs:
 outputs:
   triggered:
     description: Did a deployment trigger?  [true|false]
-    value: ${{ steps.diff.outputs.triggered }}
+    value: ${{ steps.triggered.outputs.triggered }}
 
 runs:
   using: composite
@@ -97,13 +97,6 @@ runs:
           exit 1
         fi
 
-    # Send triggers to diff action
-    - id: diff
-      uses: bcgov/action-diff-triggers@v0.2.0
-      with:
-        triggers: ${{ inputs.triggers }}
-        diff_branch: ${{ inputs.diff_branch }}
-
     # Process variables and inputs
     # Remote/override repo is required if one has been specified (input)
     - name: Checkout remote/override repo
@@ -111,49 +104,45 @@ runs:
       uses: actions/checkout@v4
       with:
         repository: ${{ inputs.repository }}
-    - id: vars
-      shell: bash
-      run: |
-        # Expand for inputs and variables
-        set -eu
 
-        # Process template, consuming variables/parameters
-        TEMPLATE="$(oc process -f ${{ inputs.file }} ${{ inputs.parameters }} --local)"
+    - uses: bcgov/action-oc-runner@v0.2.0
+      id: triggered
+      with:
+        oc_namespace: ${{ inputs.oc_namespace }}
+        oc_server: ${{ inputs.oc_server }}
+        oc_token: ${{ inputs.oc_token }}
+        triggers: ${{ inputs.triggers }}
+        commands: |
+          # Process template, consuming variables/parameters
+          TEMPLATE="$(oc process -f ${{ inputs.file }} ${{ inputs.parameters }} --local)"
 
-        # ImageStream, Deployment and Route Host from template (note: DeploymentConfig is deprecated, but still supported)
-        DDC=$(jq -rn "${TEMPLATE} | .items[] | select([.kind] | inside([\"Deployment\", \"DeploymentConfig\"])).metadata.name //empty")
-        IS=$(jq -rn "${TEMPLATE} | .items[] | select(.kind==\"ImageStream\").metadata.name //empty")
-        echo imageStream=${IS} >> $GITHUB_OUTPUT
-        echo deployment=${DDC} >> $GITHUB_OUTPUT
+          # ImageStream, Deployment and Route Host from template (note: DeploymentConfig is deprecated, but still supported)
+          DDC=$(jq -rn "${TEMPLATE} | .items[] | select([.kind] | inside([\"Deployment\", \"DeploymentConfig\"])).metadata.name //empty")
+          IS=$(jq -rn "${TEMPLATE} | .items[] | select(.kind==\"ImageStream\").metadata.name //empty")
+          echo imageStream=${IS} >> $GITHUB_OUTPUT
+          echo deployment=${DDC} >> $GITHUB_OUTPUT
 
-        # Output URL (host + path), but only if ROUTE_HOST is populated
-        ROUTE_HOST=$(jq -rn "${TEMPLATE} | .items[] | select(.kind==\"Route\").spec.host //empty")
-        if [ ! -z ${ROUTE_HOST} ]; then
-          # Path from inputs takes priority over template
-          ROUTE_PATH=${{ inputs.verification_path }}
-          [ ! -z ${ROUTE_PATH} ]|| \
-            ROUTE_PATH=$(jq -rn "${TEMPLATE} | .items[] | select(.kind==\"Route\").spec.path //empty")
+          # Output URL (host + path), but only if ROUTE_HOST is populated
+          ROUTE_HOST=$(jq -rn "${TEMPLATE} | .items[] | select(.kind==\"Route\").spec.host //empty")
+          if [ ! -z ${ROUTE_HOST} ]; then
+            # Path from inputs takes priority over template
+            ROUTE_PATH=${{ inputs.verification_path }}
+            [ ! -z ${ROUTE_PATH} ]|| \
+              ROUTE_PATH=$(jq -rn "${TEMPLATE} | .items[] | select(.kind==\"Route\").spec.path //empty")
 
-          # Remove any duplicate slashes and pass to GITHUB_OUTPUT
-          echo url="${ROUTE_HOST}/${ROUTE_PATH}" | sed 's // / g' >> $GITHUB_OUTPUT
-        fi
+            # Remove any duplicate slashes and pass to GITHUB_OUTPUT
+            echo url="${ROUTE_HOST}/${ROUTE_PATH}" | sed 's // / g' >> $GITHUB_OUTPUT
+          fi
 
     - name: Deploy
-      if: steps.diff.outputs.triggered == 'true'
       uses: bcgov/action-oc-runner@v0.2.0
       with:
-        oc_namespace: ${{ inputs.OC_NAMESPACE }}
-        oc_server: ${{ inputs.OC_SERVER }}
-        oc_token: ${{ inputs.OC_TOKEN }}
-        triggers: ('frontend/' 'backend/' 'database/')
+        oc_namespace: ${{ inputs.oc_namespace }}
+        oc_server: ${{ inputs.oc_server }}
+        oc_token: ${{ inputs.oc_token }}
+        triggers: ${{ inputs.triggers }}
         commands: |
           # Expand for deployment steps
-
-          # Allow pipefail, since we could be catching oc create errors
-          set +o pipefail
-
-          oc login --token=${{ inputs.oc_token }} --server=${{ inputs.oc_server }}
-          oc project ${{ inputs.oc_namespace }} #Safeguard!
 
           # Clean any previous ImageStreams
           IFS=" " read -ra IS <<< "${{ steps.vars.outputs.imageStream }}"
@@ -180,62 +169,60 @@ runs:
             oc rollout status deploymentconfig/${DDC} -w
           fi
 
-    - name: Route Verification
-      if: steps.vars.outputs.url &&
-        ( steps.diff.outputs.triggered == 'true' )
-      shell: bash
-      run: |
-        # Expand for route verification
+    - if: steps.vars.outputs.url
+      uses: bcgov/action-oc-runner@v0.2.0
+      with:
+        oc_namespace: ${{ inputs.oc_namespace }}
+        oc_server: ${{ inputs.oc_server }}
+        oc_token: ${{ inputs.oc_token }}
+        triggers: ${{ inputs.triggers }}
+        commands: |
+          # Expand for route verification
 
-        # Check for URL (route + path)
-        URL_HOST_PATH=${{ steps.vars.outputs.url }}
-        if [ -z "${URL_HOST_PATH}" ]; then
-          echo "No route found. Skipping."
-          exit 0
-        fi
-        echo -e "URL: http://${URL_HOST_PATH}"
-
-        # Curl and verify
-        TRIES="${{ inputs.verification_retry_attempts }} || 3"
-        SECONDS="${{ inputs.verification_retry_seconds }} || 10"
-        for (( i=0; i<"${TRIES}"; i++ )); do
-          HTTP_CODE=$(curl -Lso /dev/null -w "%{http_code}" "${URL_HOST_PATH}")
-          if [ "${HTTP_CODE}" -eq 200 ]; then
-            echo -e "Route verification successful!\n"
+          # Check for URL (route + path)
+          URL_HOST_PATH=${{ steps.vars.outputs.url }}
+          if [ -z "${URL_HOST_PATH}" ]; then
+            echo "No route found. Skipping."
             exit 0
           fi
-          echo -e "HTTP_CODE:${HTTP_CODE}, Try: #${i}"
-          sleep "${SECONDS}"
-        done
-        echo -e "\nRoute verification failed"
-        exit 1
-    
-    - name: Post-Deployment
-      if: inputs.post_rollout != '' && steps.diff.outputs.triggered == 'true'
-      shell: bash
-      run: |
-        # Expand for post-deployment steps (optional)
+          echo -e "URL: http://${URL_HOST_PATH}"
 
-        # Allow pipefail, since we could be catching oc create errors
-        set +o pipefail
+          # Curl and verify
+          TRIES="${{ inputs.verification_retry_attempts }} || 3"
+          SECONDS="${{ inputs.verification_retry_seconds }} || 10"
+          for (( i=0; i<"${TRIES}"; i++ )); do
+            HTTP_CODE=$(curl -Lso /dev/null -w "%{http_code}" "${URL_HOST_PATH}")
+            if [ "${HTTP_CODE}" -eq 200 ]; then
+              echo -e "Route verification successful!\n"
+              exit 0
+            fi
+            echo -e "HTTP_CODE:${HTTP_CODE}, Try: #${i}"
+            sleep "${SECONDS}"
+          done
+          echo -e "\nRoute verification failed"
+          exit 1
 
-        oc login --token=${{ inputs.oc_token }} --server=${{ inputs.oc_server }}
-        oc project ${{ inputs.oc_namespace }} #Safeguard!
+    - if: inputs.post_rollout != ''
+      uses: bcgov/action-oc-runner@v0.2.0
+      with:
+        oc_namespace: ${{ inputs.oc_namespace }}
+        oc_server: ${{ inputs.oc_server }}
+        oc_token: ${{ inputs.oc_token }}
+        triggers: ${{ inputs.triggers }}
+        commands: |
+          # Post-Deployment
+          ${{ inputs.post_rollout }}
 
-        # Run post deployment command
-        ${{ inputs.post_rollout }}
-
-    - if: inputs.delete_completed == 'true' && steps.diff.outputs.triggered == 'true'
-      shell: bash
-      run: |
-        # Expand for succeeded pod cleanup (optional)
-
-        # Pod Cleanup
-        oc login --token=${{ inputs.oc_token }} --server=${{ inputs.oc_server }}
-        oc project ${{ inputs.oc_namespace }} #Safeguard!
-
-        # Cleanup completed pods
-        oc delete po --field-selector=status.phase==Succeeded
+    - if: inputs.delete_completed == 'true'
+      uses: bcgov/action-oc-runner@v0.2.0
+      with:
+        oc_namespace: ${{ inputs.oc_namespace }}
+        oc_server: ${{ inputs.oc_server }}
+        oc_token: ${{ inputs.oc_token }}
+        triggers: ${{ inputs.triggers }}
+        commands: |
+          # Cleanup completed pods
+          oc delete po --field-selector=status.phase==Succeeded
 
     # Action repo needs to be present for cleanup/tests
     - name: Checkout local repo to make sure action.yml is present

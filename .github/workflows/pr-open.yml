@@ -19,7 +19,7 @@ jobs:
       frontend: ${{ steps.trigger.outputs.frontend }}
     strategy:
       matrix:
-        name: [ backend, database, frontend ]
+        name: [ backend, db, frontend ]
         include:
           - name: backend
             file: templates/backend.yml

@@ -19,7 +19,7 @@ jobs:
       frontend: ${{ steps.trigger.outputs.frontend }}
     strategy:
       matrix:
-        name: [ backend, db, frontend ]
+        name: [backend, db, frontend]
         include:
           - name: backend
             file: templates/backend.yml
@@ -48,7 +48,8 @@ jobs:
           oc_token: ${{ secrets.OC_TOKEN }}
           oc_version: ${{ matrix.oc_version }}
           overwrite: ${{ matrix.overwrite }}
-          parameters: -p ZONE=${{ github.event.number }} ${{ matrix.parameters }}
+          # parameters: -p ZONE=${{ github.event.number }} ${{ matrix.parameters }}
+          parameters: ${{ matrix.parameters }}
           post_rollout: ${{ matrix.post_rollout }}
           repository: ${{ matrix.repository }}
           verification_path: ${{ matrix.verification_path }}

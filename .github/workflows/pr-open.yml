@@ -24,6 +24,7 @@ jobs:
           - name: backend
             file: templates/backend.yml
             overwrite: true
+            parameters: -p NAME=${{ github.event.repository.name }}
             repository: ${{ github.repository }}
             verification_path: /api
           - name: db

@@ -51,7 +51,6 @@ jobs:
           parameters: |
             -p ZONE=${{ github.event.number }}
             ${{ matrix.parameters }}
-          parameters: -p ZONE=${{ github.event.number }} ${{ matrix.parameters }}
           post_rollout: ${{ matrix.post_rollout }}
           repository: ${{ matrix.repository }}
           verification_path: ${{ matrix.verification_path }}

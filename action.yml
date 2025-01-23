@@ -115,10 +115,6 @@ runs:
           # Process template, consuming variables/parameters
           TEMPLATE="$(oc process -f ${{ inputs.file }} ${{ inputs.parameters }} --local)"
 
-          # Deployment and Route Host from template (note: DeploymentConfig is deprecated, but still supported)
-          DDC=$(jq -rn "${TEMPLATE} | .items[] | select([.kind] | inside([\"Deployment\", \"DeploymentConfig\"])).metadata.name //empty")
-          echo deployment=${DDC} >> $GITHUB_OUTPUT
-
           # Output URL (host + path), but only if ROUTE_HOST is populated
           ROUTE_HOST=$(jq -rn "${TEMPLATE} | .items[] | select(.kind==\"Route\").spec.host //empty")
           if [ ! -z ${ROUTE_HOST} ]; then
@@ -131,7 +127,6 @@ runs:
             echo url="${ROUTE_HOST}/${ROUTE_PATH}" | sed 's // / g' >> $GITHUB_OUTPUT
           fi
 
-    # Setup OpenShift CLI (oc) and variables
     - uses: bcgov/action-oc-runner@v0.2.0
       with:
         oc_namespace: ${{ inputs.oc_namespace }}
@@ -170,10 +165,11 @@ runs:
           oc create -f - 2>&1 <<< "${TEMPLATE}" | sed 's/.*: //'
         fi
 
+        # Deployment and Route Host from template (note: DeploymentConfig is deprecated, but still supported)
+        DDC="$(jq -rn "${TEMPLATE} | .items[] | select([.kind] | inside([\"Deployment\", \"DeploymentConfig\"])).metadata.name //empty")"
+
         # Follow any active rollouts; temporary support for DeploymentConfigs
-        DDC=${{ steps.vars.outputs.deployment }}
         if [ ! -z "${DDC}" ]&&[ ! -z $(oc get deployment ${DDC} -o name --ignore-not-found) ]; then
-          # oc rollout restart deployment/${DDC}
           oc rollout status deployment/${DDC} -w
         elif [ ! -z "${DDC}" ]&&[ ! -z $(oc get deploymentconfig ${DDC} -o name --ignore-not-found) ]; then
           oc rollout status deploymentconfig/${DDC} -w

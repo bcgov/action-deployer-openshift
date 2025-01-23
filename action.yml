@@ -101,7 +101,7 @@ runs:
       with:
         repository: ${{ inputs.repository }}
 
-    # Setup OpenShift CLI (oc) and login
+    # Setup OpenShift CLI (oc) and variables
     - uses: bcgov/action-oc-runner@v0.2.0
       id: vars
       with:
@@ -116,10 +116,8 @@ runs:
           # Process template, consuming variables/parameters
           TEMPLATE="$(oc process -f ${{ inputs.file }} ${{ inputs.parameters }} --local)"
 
-          # ImageStream, Deployment and Route Host from template (note: DeploymentConfig is deprecated, but still supported)
+          # Deployment and Route Host from template (note: DeploymentConfig is deprecated, but still supported)
           DDC=$(jq -rn "${TEMPLATE} | .items[] | select([.kind] | inside([\"Deployment\", \"DeploymentConfig\"])).metadata.name //empty")
-          IS=$(jq -rn "${TEMPLATE} | .items[] | select(.kind==\"ImageStream\").metadata.name //empty")
-          echo imageStream=${IS} >> $GITHUB_OUTPUT
           echo deployment=${DDC} >> $GITHUB_OUTPUT
 
           # Output URL (host + path), but only if ROUTE_HOST is populated
@@ -134,6 +132,28 @@ runs:
             echo url="${ROUTE_HOST}/${ROUTE_PATH}" | sed 's // / g' >> $GITHUB_OUTPUT
           fi
 
+    # Setup OpenShift CLI (oc) and variables
+    - uses: bcgov/action-oc-runner@v0.2.0
+      id: vars
+      with:
+        oc_namespace: ${{ inputs.oc_namespace }}
+        oc_token: ${{ inputs.oc_token }}
+        oc_server: ${{ inputs.oc_server }}
+        triggers: ${{ inputs.triggers }}
+        commands: |
+          # Remove any conflicting ImageStreams
+
+          # Process template, consuming variables/parameters
+          TEMPLATE="$(oc process -f ${{ inputs.file }} ${{ inputs.parameters }} --local)"
+
+          # Clean any previous ImageStreams
+          IS=$(jq -rn "${TEMPLATE} | .items[] | select(.kind==\"ImageStream\").metadata.name //empty")
+          IFS=" " read -ra IS <<< "${IS}"
+          for i in "${IS[@]}"
+          do
+            [ ! $(oc get is -o name | grep ^imagestream.image.openshift.io/${i}$) ]|| oc delete is/${i}
+          done
+
     - name: Deploy
       if: steps.vars.outputs.triggered == 'true'
       shell: bash
@@ -142,13 +162,6 @@ runs:
 
         # Allow pipefail, since we could be catching oc create errors
         set +o pipefail
-
-        # Clean any previous ImageStreams
-        IFS=" " read -ra IS <<< "${{ steps.vars.outputs.imageStream }}"
-        for i in "${IS[@]}"
-        do
-          [ ! $(oc get is -o name | grep ^imagestream.image.openshift.io/${i}$) ]|| oc delete is/${i}
-        done
 
         # Apply (overwrites) or create (does not overwrite) using processed template
         TEMPLATE="$(oc process -f ${{ inputs.file }} ${{ inputs.parameters }} --local)"

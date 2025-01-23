@@ -106,10 +106,12 @@ runs:
 
     # Setup OpenShift CLI (oc) and login
     - uses: bcgov/action-oc-runner@v0.2.0
+      id: diff
       with:
         oc_namespace: ${{ inputs.oc_namespace }}
         oc_token: ${{ inputs.oc_token }}
         oc_server: ${{ inputs.oc_server }}
+        triggers: ${{ inputs.triggers }}
 
     # Remote/override repo is required if one has been specified (input)
     - uses: actions/checkout@v4

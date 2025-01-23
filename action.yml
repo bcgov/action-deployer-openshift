@@ -101,7 +101,6 @@ runs:
       with:
         repository: ${{ inputs.repository }}
 
-    # Setup OpenShift CLI (oc) and variables
     - uses: bcgov/action-oc-runner@v0.2.0
       id: vars
       with:
@@ -110,7 +109,7 @@ runs:
         oc_server: ${{ inputs.oc_server }}
         triggers: ${{ inputs.triggers }}
         commands: |
-          # Expand for inputs and variables
+          # Setup OpenShift CLI (oc) and variables
           set -eu
 
           # Process template, consuming variables/parameters
@@ -134,7 +133,6 @@ runs:
 
     # Setup OpenShift CLI (oc) and variables
     - uses: bcgov/action-oc-runner@v0.2.0
-      id: vars
       with:
         oc_namespace: ${{ inputs.oc_namespace }}
         oc_token: ${{ inputs.oc_token }}

@@ -104,11 +104,12 @@ runs:
         triggers: ${{ inputs.triggers }}
         diff_branch: ${{ inputs.diff_branch }}
 
-    # Override OpenShift version, if specified
-    - name: Install CLI tools from OpenShift Mirror
-      uses: redhat-actions/openshift-tools-installer@v1
+    # Setup OpenShift CLI (oc) and login
+    - uses: bcgov/action-oc-runner@v0.2.0
       with:
-        oc: ${{ inputs.oc_version || '4' }}
+        oc_namespace: ${{ inputs.oc_namespace }}
+        oc_token: ${{ inputs.oc_token }}
+        oc_server: ${{ inputs.oc_server }}
 
     # Process variables and inputs
     # Remote/override repo is required if one has been specified (input)

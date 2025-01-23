@@ -106,7 +106,7 @@ runs:
 
     # Setup OpenShift CLI (oc) and login
     - uses: bcgov/action-oc-runner@v0.2.0
-      id: diff
+      id: triggered
       with:
         oc_namespace: ${{ inputs.oc_namespace }}
         oc_token: ${{ inputs.oc_token }}

@@ -109,31 +109,6 @@ runs:
         oc_server: ${{ inputs.oc_server }}
         triggers: ${{ inputs.triggers }}
         commands: |
-          # Setup OpenShift CLI (oc) and variables
-          set -eu
-
-          # Process template, consuming variables/parameters
-          TEMPLATE="$(oc process -f ${{ inputs.file }} ${{ inputs.parameters }} --local)"
-
-          # Output URL (host + path), but only if ROUTE_HOST is populated
-          ROUTE_HOST=$(jq -rn "${TEMPLATE} | .items[] | select(.kind==\"Route\").spec.host //empty")
-          if [ ! -z ${ROUTE_HOST} ]; then
-            # Path from inputs takes priority over template
-            ROUTE_PATH=${{ inputs.verification_path }}
-            [ ! -z ${ROUTE_PATH} ]|| \
-              ROUTE_PATH=$(jq -rn "${TEMPLATE} | .items[] | select(.kind==\"Route\").spec.path //empty")
-
-            # Remove any duplicate slashes and pass to GITHUB_OUTPUT
-            echo url="${ROUTE_HOST}/${ROUTE_PATH}" | sed 's // / g' >> $GITHUB_OUTPUT
-          fi
-
-    - uses: bcgov/action-oc-runner@v0.2.0
-      with:
-        oc_namespace: ${{ inputs.oc_namespace }}
-        oc_token: ${{ inputs.oc_token }}
-        oc_server: ${{ inputs.oc_server }}
-        triggers: ${{ inputs.triggers }}
-        commands: |
           # Remove any conflicting ImageStreams
 
           # Process template, consuming variables/parameters
@@ -176,14 +151,28 @@ runs:
         fi
         
     - name: Route Verification
-      if: steps.vars.outputs.url &&
-        ( steps.vars.outputs.triggered == 'true' )
+      if: steps.vars.outputs.triggered == 'true'
       shell: bash
       run: |
         # Expand for route verification
 
+        # Process template, consuming variables/parameters
+        TEMPLATE="$(oc process -f ${{ inputs.file }} ${{ inputs.parameters }} --local)"
+
+        # Output URL (host + path), but only if ROUTE_HOST is populated
+        ROUTE_HOST=$(jq -rn "${TEMPLATE} | .items[] | select(.kind==\"Route\").spec.host //empty")
+        if [ ! -z ${ROUTE_HOST} ]; then
+          # Path from inputs takes priority over template
+          ROUTE_PATH=${{ inputs.verification_path }}
+          [ ! -z ${ROUTE_PATH} ]|| \
+            ROUTE_PATH=$(jq -rn "${TEMPLATE} | .items[] | select(.kind==\"Route\").spec.path //empty")
+
+          # Remove any duplicate slashes and pass to GITHUB_OUTPUT
+          URL=$(echo "${ROUTE_HOST}/${ROUTE_PATH}" | sed 's // / g')
+        fi
+
         # Check for URL (route + path)
-        URL_HOST_PATH=${{ steps.vars.outputs.url }}
+        URL_HOST_PATH=${URL:-}
         if [ -z "${URL_HOST_PATH}" ]; then
           echo "No route found. Skipping."
           exit 0

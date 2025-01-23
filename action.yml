@@ -111,13 +111,12 @@ runs:
         oc_token: ${{ inputs.oc_token }}
         oc_server: ${{ inputs.oc_server }}
 
-    # Process variables and inputs
     # Remote/override repo is required if one has been specified (input)
-    - name: Checkout remote/override repo
-      if: github.repository != inputs.repository
-      uses: actions/checkout@v4
+    - uses: actions/checkout@v4
       with:
         repository: ${{ inputs.repository }}
+
+    # Process variables and inputs
     - id: vars
       shell: bash
       run: |

@@ -69,7 +69,7 @@ inputs:
 outputs:
   triggered:
     description: Did a deployment trigger?  [true|false]
-    value: ${{ steps.diff.outputs.triggered }}
+    value: ${{ steps.triggers.outputs.triggered }}
 
 runs:
   using: composite
@@ -97,12 +97,9 @@ runs:
           exit 1
         fi
 
-    # Send triggers to diff action
-    - id: diff
-      uses: bcgov/action-diff-triggers@v0.2.0
+    - uses: actions/checkout@v4
       with:
-        triggers: ${{ inputs.triggers }}
-        diff_branch: ${{ inputs.diff_branch }}
+        repository: ${{ inputs.repository }}
 
     # Setup OpenShift CLI (oc) and login
     - uses: bcgov/action-oc-runner@v0.2.0
@@ -112,11 +109,6 @@ runs:
         oc_token: ${{ inputs.oc_token }}
         oc_server: ${{ inputs.oc_server }}
         triggers: ${{ inputs.triggers }}
-
-    # Remote/override repo is required if one has been specified (input)
-    - uses: actions/checkout@v4
-      with:
-        repository: ${{ inputs.repository }}
 
     # Process variables and inputs
     - id: vars
@@ -147,7 +139,7 @@ runs:
         fi
 
     - name: Deploy
-      if: steps.diff.outputs.triggered == 'true'
+      if: steps.triggers.outputs.triggered == 'true'
       shell: bash
       run: |
         # Expand for deployment steps
@@ -182,7 +174,7 @@ runs:
         
     - name: Route Verification
       if: steps.vars.outputs.url &&
-        ( steps.diff.outputs.triggered == 'true' )
+        ( steps.triggers.outputs.triggered == 'true' )
       shell: bash
       run: |
         # Expand for route verification
@@ -211,13 +203,13 @@ runs:
         exit 1
     
     - name: Post-Deployment
-      if: inputs.post_rollout != '' && steps.diff.outputs.triggered == 'true'
+      if: inputs.post_rollout != '' && steps.triggers.outputs.triggered == 'true'
       shell: bash
       run: |
         # Run post deployment command (optional)
         ${{ inputs.post_rollout }}
 
-    - if: inputs.delete_completed == 'true' && steps.diff.outputs.triggered == 'true'
+    - if: inputs.delete_completed == 'true' && steps.triggers.outputs.triggered == 'true'
       shell: bash
       run: |
         # Cleanup completed pods

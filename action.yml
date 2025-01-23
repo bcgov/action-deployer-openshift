@@ -155,9 +155,6 @@ runs:
         # Allow pipefail, since we could be catching oc create errors
         set +o pipefail
 
-        oc login --token=${{ inputs.oc_token }} --server=${{ inputs.oc_server }}
-        oc project ${{ inputs.oc_namespace }} #Safeguard!
-
         # Clean any previous ImageStreams
         IFS=" " read -ra IS <<< "${{ steps.vars.outputs.imageStream }}"
         for i in "${IS[@]}"

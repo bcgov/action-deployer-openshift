@@ -200,18 +200,27 @@ runs:
           echo -e "\nRoute verification failed"
           exit 1
     
-    - name: Post-Deployment
-      if: inputs.post_rollout != '' && steps.vars.outputs.triggered == 'true'
-      shell: bash
-      run: |
-        # Run post deployment command (optional)
-        ${{ inputs.post_rollout }}
+    - uses: bcgov/action-oc-runner@v0.2.0
+      if: inputs.post_rollout != ''
+      with:
+        oc_namespace: ${{ inputs.oc_namespace }}
+        oc_token: ${{ inputs.oc_token }}
+        oc_server: ${{ inputs.oc_server }}
+        triggers: ${{ inputs.triggers }}
+        commands: |
+          # Run post deployment command (optional)
+          ${{ inputs.post_rollout }}
 
-    - if: inputs.delete_completed == 'true' && steps.vars.outputs.triggered == 'true'
-      shell: bash
-      run: |
-        # Cleanup completed pods
-        oc delete po --field-selector=status.phase==Succeeded
+    - uses: bcgov/action-oc-runner@v0.2.0
+      if: inputs.delete_completed == 'true'
+      with:
+        oc_namespace: ${{ inputs.oc_namespace }}
+        oc_token: ${{ inputs.oc_token }}
+        oc_server: ${{ inputs.oc_server }}
+        triggers: ${{ inputs.triggers }}
+        commands: |
+          # Cleanup completed pods
+          oc delete po --field-selector=status.phase==Succeeded
 
     # Action repo needs to be present for cleanup/tests
     - name: Checkout local repo to make sure action.yml is present

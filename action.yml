@@ -48,7 +48,6 @@ inputs:
   repository:
     description: Optionally, specify a different repo to clone
     default: ${{ github.repository }}
-
   verification_retry_attempts:
     description: Number of times to attempt deployment verification
     default: "3"
@@ -69,7 +68,7 @@ inputs:
 outputs:
   triggered:
     description: Did a deployment trigger?  [true|false]
-    value: ${{ steps.vars.outputs.triggered }}
+    value: ${{ steps.deploy.outputs.triggered }}
 
 runs:
   using: composite
@@ -102,7 +101,6 @@ runs:
         repository: ${{ inputs.repository }}
 
     - uses: bcgov/action-oc-runner@v0.2.0
-      id: vars
       with:
         oc_namespace: ${{ inputs.oc_namespace }}
         oc_token: ${{ inputs.oc_token }}
@@ -123,6 +121,7 @@ runs:
           done
 
     - uses: bcgov/action-oc-runner@v0.2.0
+      id: deploy
       with:
         oc_namespace: ${{ inputs.oc_namespace }}
         oc_token: ${{ inputs.oc_token }}

@@ -48,7 +48,6 @@ inputs:
   repository:
     description: Optionally, specify a different repo to clone
     default: ${{ github.repository }}
-
   verification_retry_attempts:
     description: Number of times to attempt deployment verification
     default: "3"
@@ -69,7 +68,7 @@ inputs:
 outputs:
   triggered:
     description: Did a deployment trigger?  [true|false]
-    value: ${{ steps.diff.outputs.triggered }}
+    value: ${{ steps.deploy.outputs.triggered }}
 
 runs:
   using: composite
@@ -97,146 +96,130 @@ runs:
           exit 1
         fi
 
-    # Send triggers to diff action
-    - id: diff
-      uses: bcgov/action-diff-triggers@v0.2.0
-      with:
-        triggers: ${{ inputs.triggers }}
-        diff_branch: ${{ inputs.diff_branch }}
-
-    # Override OpenShift version, if specified
-    - name: Install CLI tools from OpenShift Mirror
-      uses: redhat-actions/openshift-tools-installer@v1
-      with:
-        oc: ${{ inputs.oc_version || '4' }}
-
-    # Process variables and inputs
-    # Remote/override repo is required if one has been specified (input)
-    - name: Checkout remote/override repo
-      if: github.repository != inputs.repository
-      uses: actions/checkout@v4
+    - uses: actions/checkout@v4
       with:
         repository: ${{ inputs.repository }}
-    - id: vars
-      shell: bash
-      run: |
-        # Expand for inputs and variables
-        set -eu
 
-        # Process template, consuming variables/parameters
-        TEMPLATE="$(oc process -f ${{ inputs.file }} ${{ inputs.parameters }} --local)"
+    - uses: bcgov/action-oc-runner@v0.2.0
+      with:
+        oc_namespace: ${{ inputs.oc_namespace }}
+        oc_token: ${{ inputs.oc_token }}
+        oc_server: ${{ inputs.oc_server }}
+        triggers: ${{ inputs.triggers }}
+        commands: |
+          # Remove any conflicting ImageStreams
 
-        # ImageStream, Deployment and Route Host from template (note: DeploymentConfig is deprecated, but still supported)
-        DDC=$(jq -rn "${TEMPLATE} | .items[] | select([.kind] | inside([\"Deployment\", \"DeploymentConfig\"])).metadata.name //empty")
-        IS=$(jq -rn "${TEMPLATE} | .items[] | select(.kind==\"ImageStream\").metadata.name //empty")
-        echo imageStream=${IS} >> $GITHUB_OUTPUT
-        echo deployment=${DDC} >> $GITHUB_OUTPUT
+          # Process template, consuming variables/parameters
+          TEMPLATE="$(oc process -f ${{ inputs.file }} ${{ inputs.parameters }} --local)"
 
-        # Output URL (host + path), but only if ROUTE_HOST is populated
-        ROUTE_HOST=$(jq -rn "${TEMPLATE} | .items[] | select(.kind==\"Route\").spec.host //empty")
-        if [ ! -z ${ROUTE_HOST} ]; then
-          # Path from inputs takes priority over template
-          ROUTE_PATH=${{ inputs.verification_path }}
-          [ ! -z ${ROUTE_PATH} ]|| \
-            ROUTE_PATH=$(jq -rn "${TEMPLATE} | .items[] | select(.kind==\"Route\").spec.path //empty")
+          # Clean any previous ImageStreams
+          IS=$(jq -rn "${TEMPLATE} | .items[] | select(.kind==\"ImageStream\").metadata.name //empty")
+          IFS=" " read -ra IS <<< "${IS}"
+          for i in "${IS[@]}"
+          do
+            [ ! $(oc get is -o name | grep ^imagestream.image.openshift.io/${i}$) ]|| oc delete is/${i}
+          done
 
-          # Remove any duplicate slashes and pass to GITHUB_OUTPUT
-          echo url="${ROUTE_HOST}/${ROUTE_PATH}" | sed 's // / g' >> $GITHUB_OUTPUT
-        fi
+    - uses: bcgov/action-oc-runner@v0.2.0
+      id: deploy
+      with:
+        oc_namespace: ${{ inputs.oc_namespace }}
+        oc_token: ${{ inputs.oc_token }}
+        oc_server: ${{ inputs.oc_server }}
+        triggers: ${{ inputs.triggers }}
+        commands: |
+          # Expand for deployment steps
 
-    - name: Deploy
-      if: steps.diff.outputs.triggered == 'true'
-      shell: bash
-      run: |
-        # Expand for deployment steps
+          # Allow pipefail, since we could be catching oc create errors
+          set +o pipefail
 
-        # Allow pipefail, since we could be catching oc create errors
-        set +o pipefail
+          # Apply (overwrites) or create (does not overwrite) using processed template
+          TEMPLATE="$(oc process -f ${{ inputs.file }} ${{ inputs.parameters }} --local)"
+          if [ "${{ inputs.overwrite }}" == "true" ]; then
+            oc apply --timeout=${{ inputs.timeout || '15m' }} -f - <<< "${TEMPLATE}"
+          else
+            # Suppress AlreadyExists errors and expected failure
+            oc create -f - 2>&1 <<< "${TEMPLATE}" | sed 's/.*: //'
+          fi
 
-        oc login --token=${{ inputs.oc_token }} --server=${{ inputs.oc_server }}
-        oc project ${{ inputs.oc_namespace }} #Safeguard!
+          # Deployment and Route Host from template (note: DeploymentConfig is deprecated, but still supported)
+          DDC="$(jq -rn "${TEMPLATE} | .items[] | select([.kind] | inside([\"Deployment\", \"DeploymentConfig\"])).metadata.name //empty")"
 
-        # Clean any previous ImageStreams
-        IFS=" " read -ra IS <<< "${{ steps.vars.outputs.imageStream }}"
-        for i in "${IS[@]}"
-        do
-          [ ! $(oc get is -o name | grep ^imagestream.image.openshift.io/${i}$) ]|| oc delete is/${i}
-        done
+          # Follow any active rollouts; temporary support for DeploymentConfigs
+          if [ ! -z "${DDC}" ]&&[ ! -z $(oc get deployment ${DDC} -o name --ignore-not-found) ]; then
+            oc rollout status deployment/${DDC} -w
+          elif [ ! -z "${DDC}" ]&&[ ! -z $(oc get deploymentconfig ${DDC} -o name --ignore-not-found) ]; then
+            oc rollout status deploymentconfig/${DDC} -w
+          fi
 
-        # Apply (overwrites) or create (does not overwrite) using processed template
-        TEMPLATE="$(oc process -f ${{ inputs.file }} ${{ inputs.parameters }} --local)"
-        if [ "${{ inputs.overwrite }}" == "true" ]; then
-          oc apply --timeout=${{ inputs.timeout || '15m' }} -f - <<< "${TEMPLATE}"
-        else
-          # Suppress AlreadyExists errors and expected failure
-          oc create -f - 2>&1 <<< "${TEMPLATE}" | sed 's/.*: //'
-        fi
+    - uses: bcgov/action-oc-runner@v0.2.0
+      with:
+        oc_namespace: ${{ inputs.oc_namespace }}
+        oc_token: ${{ inputs.oc_token }}
+        oc_server: ${{ inputs.oc_server }}
+        triggers: ${{ inputs.triggers }}
+        commands: |
+          # Expand for route verification
 
-        # Follow any active rollouts; temporary support for DeploymentConfigs
-        DDC=${{ steps.vars.outputs.deployment }}
-        if [ ! -z "${DDC}" ]&&[ ! -z $(oc get deployment ${DDC} -o name --ignore-not-found) ]; then
-          # oc rollout restart deployment/${DDC}
-          oc rollout status deployment/${DDC} -w
-        elif [ ! -z "${DDC}" ]&&[ ! -z $(oc get deploymentconfig ${DDC} -o name --ignore-not-found) ]; then
-          oc rollout status deploymentconfig/${DDC} -w
-        fi
-        
-    - name: Route Verification
-      if: steps.vars.outputs.url &&
-        ( steps.diff.outputs.triggered == 'true' )
-      shell: bash
-      run: |
-        # Expand for route verification
+          # Process template, consuming variables/parameters
+          TEMPLATE="$(oc process -f ${{ inputs.file }} ${{ inputs.parameters }} --local)"
 
-        # Check for URL (route + path)
-        URL_HOST_PATH=${{ steps.vars.outputs.url }}
-        if [ -z "${URL_HOST_PATH}" ]; then
-          echo "No route found. Skipping."
-          exit 0
-        fi
-        echo -e "URL: http://${URL_HOST_PATH}"
+          # Output URL (host + path), but only if ROUTE_HOST is populated
+          ROUTE_HOST=$(jq -rn "${TEMPLATE} | .items[] | select(.kind==\"Route\").spec.host //empty")
+          if [ ! -z ${ROUTE_HOST} ]; then
+            # Path from inputs takes priority over template
+            ROUTE_PATH=${{ inputs.verification_path }}
+            [ ! -z ${ROUTE_PATH} ]|| \
+              ROUTE_PATH=$(jq -rn "${TEMPLATE} | .items[] | select(.kind==\"Route\").spec.path //empty")
 
-        # Curl and verify
-        TRIES="${{ inputs.verification_retry_attempts }} || 3"
-        SECONDS="${{ inputs.verification_retry_seconds }} || 10"
-        for (( i=0; i<"${TRIES}"; i++ )); do
-          HTTP_CODE=$(curl -Lso /dev/null -w "%{http_code}" "${URL_HOST_PATH}")
-          if [ "${HTTP_CODE}" -eq 200 ]; then
-            echo -e "Route verification successful!\n"
+            # Remove any duplicate slashes and pass to GITHUB_OUTPUT
+            URL=$(echo "${ROUTE_HOST}/${ROUTE_PATH}" | sed 's // / g')
+          fi
+
+          # Check for URL (route + path)
+          URL_HOST_PATH=${URL:-}
+          if [ -z "${URL_HOST_PATH}" ]; then
+            echo "No route found. Skipping."
             exit 0
           fi
-          echo -e "HTTP_CODE:${HTTP_CODE}, Try: #${i}"
-          sleep "${SECONDS}"
-        done
-        echo -e "\nRoute verification failed"
-        exit 1
+          echo -e "URL: http://${URL_HOST_PATH}"
+
+          # Curl and verify
+          TRIES="${{ inputs.verification_retry_attempts }} || 3"
+          SECONDS="${{ inputs.verification_retry_seconds }} || 10"
+          for (( i=0; i<"${TRIES}"; i++ )); do
+            HTTP_CODE=$(curl -Lso /dev/null -w "%{http_code}" "${URL_HOST_PATH}")
+            if [ "${HTTP_CODE}" -eq 200 ]; then
+              echo -e "Route verification successful!\n"
+              exit 0
+            fi
+            echo -e "HTTP_CODE:${HTTP_CODE}, Try: #${i}"
+            sleep "${SECONDS}"
+          done
+          echo -e "\nRoute verification failed"
+          exit 1
     
-    - name: Post-Deployment
-      if: inputs.post_rollout != '' && steps.diff.outputs.triggered == 'true'
-      shell: bash
-      run: |
-        # Expand for post-deployment steps (optional)
+    - uses: bcgov/action-oc-runner@v0.2.0
+      if: inputs.post_rollout != ''
+      with:
+        oc_namespace: ${{ inputs.oc_namespace }}
+        oc_token: ${{ inputs.oc_token }}
+        oc_server: ${{ inputs.oc_server }}
+        triggers: ${{ inputs.triggers }}
+        commands: |
+          # Run post deployment command (optional)
+          ${{ inputs.post_rollout }}
 
-        # Allow pipefail, since we could be catching oc create errors
-        set +o pipefail
-
-        oc login --token=${{ inputs.oc_token }} --server=${{ inputs.oc_server }}
-        oc project ${{ inputs.oc_namespace }} #Safeguard!
-
-        # Run post deployment command
-        ${{ inputs.post_rollout }}
-
-    - if: inputs.delete_completed == 'true' && steps.diff.outputs.triggered == 'true'
-      shell: bash
-      run: |
-        # Expand for succeeded pod cleanup (optional)
-
-        # Pod Cleanup
-        oc login --token=${{ inputs.oc_token }} --server=${{ inputs.oc_server }}
-        oc project ${{ inputs.oc_namespace }} #Safeguard!
-
-        # Cleanup completed pods
-        oc delete po --field-selector=status.phase==Succeeded
+    - uses: bcgov/action-oc-runner@v0.2.0
+      if: inputs.delete_completed == 'true'
+      with:
+        oc_namespace: ${{ inputs.oc_namespace }}
+        oc_token: ${{ inputs.oc_token }}
+        oc_server: ${{ inputs.oc_server }}
+        triggers: ${{ inputs.triggers }}
+        commands: |
+          # Cleanup completed pods
+          oc delete po --field-selector=status.phase==Succeeded
 
     # Action repo needs to be present for cleanup/tests
     - name: Checkout local repo to make sure action.yml is present

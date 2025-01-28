@@ -122,77 +122,83 @@ runs:
             [ ! $(oc get is -o name | grep ^imagestream.image.openshift.io/${i}$) ]|| oc delete is/${i}
           done
 
-    - name: Deploy
-      if: steps.vars.outputs.triggered == 'true'
-      shell: bash
-      run: |
-        # Expand for deployment steps
+    - uses: bcgov/action-oc-runner@v0.2.0
+      with:
+        oc_namespace: ${{ inputs.oc_namespace }}
+        oc_token: ${{ inputs.oc_token }}
+        oc_server: ${{ inputs.oc_server }}
+        triggers: ${{ inputs.triggers }}
+        commands: |
+          # Expand for deployment steps
 
-        # Allow pipefail, since we could be catching oc create errors
-        set +o pipefail
+          # Allow pipefail, since we could be catching oc create errors
+          set +o pipefail
 
-        # Apply (overwrites) or create (does not overwrite) using processed template
-        TEMPLATE="$(oc process -f ${{ inputs.file }} ${{ inputs.parameters }} --local)"
-        if [ "${{ inputs.overwrite }}" == "true" ]; then
-          oc apply --timeout=${{ inputs.timeout || '15m' }} -f - <<< "${TEMPLATE}"
-        else
-          # Suppress AlreadyExists errors and expected failure
-          oc create -f - 2>&1 <<< "${TEMPLATE}" | sed 's/.*: //'
-        fi
+          # Apply (overwrites) or create (does not overwrite) using processed template
+          TEMPLATE="$(oc process -f ${{ inputs.file }} ${{ inputs.parameters }} --local)"
+          if [ "${{ inputs.overwrite }}" == "true" ]; then
+            oc apply --timeout=${{ inputs.timeout || '15m' }} -f - <<< "${TEMPLATE}"
+          else
+            # Suppress AlreadyExists errors and expected failure
+            oc create -f - 2>&1 <<< "${TEMPLATE}" | sed 's/.*: //'
+          fi
 
-        # Deployment and Route Host from template (note: DeploymentConfig is deprecated, but still supported)
-        DDC="$(jq -rn "${TEMPLATE} | .items[] | select([.kind] | inside([\"Deployment\", \"DeploymentConfig\"])).metadata.name //empty")"
+          # Deployment and Route Host from template (note: DeploymentConfig is deprecated, but still supported)
+          DDC="$(jq -rn "${TEMPLATE} | .items[] | select([.kind] | inside([\"Deployment\", \"DeploymentConfig\"])).metadata.name //empty")"
 
-        # Follow any active rollouts; temporary support for DeploymentConfigs
-        if [ ! -z "${DDC}" ]&&[ ! -z $(oc get deployment ${DDC} -o name --ignore-not-found) ]; then
-          oc rollout status deployment/${DDC} -w
-        elif [ ! -z "${DDC}" ]&&[ ! -z $(oc get deploymentconfig ${DDC} -o name --ignore-not-found) ]; then
-          oc rollout status deploymentconfig/${DDC} -w
-        fi
-        
-    - name: Route Verification
-      if: steps.vars.outputs.triggered == 'true'
-      shell: bash
-      run: |
-        # Expand for route verification
+          # Follow any active rollouts; temporary support for DeploymentConfigs
+          if [ ! -z "${DDC}" ]&&[ ! -z $(oc get deployment ${DDC} -o name --ignore-not-found) ]; then
+            oc rollout status deployment/${DDC} -w
+          elif [ ! -z "${DDC}" ]&&[ ! -z $(oc get deploymentconfig ${DDC} -o name --ignore-not-found) ]; then
+            oc rollout status deploymentconfig/${DDC} -w
+          fi
 
-        # Process template, consuming variables/parameters
-        TEMPLATE="$(oc process -f ${{ inputs.file }} ${{ inputs.parameters }} --local)"
+    - uses: bcgov/action-oc-runner@v0.2.0
+      with:
+        oc_namespace: ${{ inputs.oc_namespace }}
+        oc_token: ${{ inputs.oc_token }}
+        oc_server: ${{ inputs.oc_server }}
+        triggers: ${{ inputs.triggers }}
+        commands: |
+          # Expand for route verification
 
-        # Output URL (host + path), but only if ROUTE_HOST is populated
-        ROUTE_HOST=$(jq -rn "${TEMPLATE} | .items[] | select(.kind==\"Route\").spec.host //empty")
-        if [ ! -z ${ROUTE_HOST} ]; then
-          # Path from inputs takes priority over template
-          ROUTE_PATH=${{ inputs.verification_path }}
-          [ ! -z ${ROUTE_PATH} ]|| \
-            ROUTE_PATH=$(jq -rn "${TEMPLATE} | .items[] | select(.kind==\"Route\").spec.path //empty")
+          # Process template, consuming variables/parameters
+          TEMPLATE="$(oc process -f ${{ inputs.file }} ${{ inputs.parameters }} --local)"
 
-          # Remove any duplicate slashes and pass to GITHUB_OUTPUT
-          URL=$(echo "${ROUTE_HOST}/${ROUTE_PATH}" | sed 's // / g')
-        fi
+          # Output URL (host + path), but only if ROUTE_HOST is populated
+          ROUTE_HOST=$(jq -rn "${TEMPLATE} | .items[] | select(.kind==\"Route\").spec.host //empty")
+          if [ ! -z ${ROUTE_HOST} ]; then
+            # Path from inputs takes priority over template
+            ROUTE_PATH=${{ inputs.verification_path }}
+            [ ! -z ${ROUTE_PATH} ]|| \
+              ROUTE_PATH=$(jq -rn "${TEMPLATE} | .items[] | select(.kind==\"Route\").spec.path //empty")
 
-        # Check for URL (route + path)
-        URL_HOST_PATH=${URL:-}
-        if [ -z "${URL_HOST_PATH}" ]; then
-          echo "No route found. Skipping."
-          exit 0
-        fi
-        echo -e "URL: http://${URL_HOST_PATH}"
+            # Remove any duplicate slashes and pass to GITHUB_OUTPUT
+            URL=$(echo "${ROUTE_HOST}/${ROUTE_PATH}" | sed 's // / g')
+          fi
 
-        # Curl and verify
-        TRIES="${{ inputs.verification_retry_attempts }} || 3"
-        SECONDS="${{ inputs.verification_retry_seconds }} || 10"
-        for (( i=0; i<"${TRIES}"; i++ )); do
-          HTTP_CODE=$(curl -Lso /dev/null -w "%{http_code}" "${URL_HOST_PATH}")
-          if [ "${HTTP_CODE}" -eq 200 ]; then
-            echo -e "Route verification successful!\n"
+          # Check for URL (route + path)
+          URL_HOST_PATH=${URL:-}
+          if [ -z "${URL_HOST_PATH}" ]; then
+            echo "No route found. Skipping."
             exit 0
           fi
-          echo -e "HTTP_CODE:${HTTP_CODE}, Try: #${i}"
-          sleep "${SECONDS}"
-        done
-        echo -e "\nRoute verification failed"
-        exit 1
+          echo -e "URL: http://${URL_HOST_PATH}"
+
+          # Curl and verify
+          TRIES="${{ inputs.verification_retry_attempts }} || 3"
+          SECONDS="${{ inputs.verification_retry_seconds }} || 10"
+          for (( i=0; i<"${TRIES}"; i++ )); do
+            HTTP_CODE=$(curl -Lso /dev/null -w "%{http_code}" "${URL_HOST_PATH}")
+            if [ "${HTTP_CODE}" -eq 200 ]; then
+              echo -e "Route verification successful!\n"
+              exit 0
+            fi
+            echo -e "HTTP_CODE:${HTTP_CODE}, Try: #${i}"
+            sleep "${SECONDS}"
+          done
+          echo -e "\nRoute verification failed"
+          exit 1
     
     - name: Post-Deployment
       if: inputs.post_rollout != '' && steps.vars.outputs.triggered == 'true'

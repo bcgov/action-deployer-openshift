@@ -127,6 +127,7 @@ runs:
         oc_namespace: ${{ inputs.oc_namespace }}
         oc_token: ${{ inputs.oc_token }}
         oc_server: ${{ inputs.oc_server }}
+        repository: ${{ inputs.repository }}
         triggers: ${{ inputs.triggers }}
         commands: |
           # Expand for deployment steps
@@ -158,6 +159,7 @@ runs:
         oc_namespace: ${{ inputs.oc_namespace }}
         oc_token: ${{ inputs.oc_token }}
         oc_server: ${{ inputs.oc_server }}
+        repository: ${{ inputs.repository }}
         triggers: ${{ inputs.triggers }}
         commands: |
           # Expand for route verification
@@ -206,6 +208,7 @@ runs:
         oc_namespace: ${{ inputs.oc_namespace }}
         oc_token: ${{ inputs.oc_token }}
         oc_server: ${{ inputs.oc_server }}
+        repository: ${{ inputs.repository }}
         triggers: ${{ inputs.triggers }}
         commands: |
           # Run post deployment command (optional)

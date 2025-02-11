@@ -100,7 +100,7 @@ runs:
       with:
         repository: ${{ inputs.repository }}
 
-    - uses: bcgov/action-oc-runner@v0.3.0
+    - uses: bcgov/action-oc-runner@v1.0.0
       with:
         oc_namespace: ${{ inputs.oc_namespace }}
         oc_token: ${{ inputs.oc_token }}
@@ -121,7 +121,7 @@ runs:
             [ ! $(oc get is -o name | grep ^imagestream.image.openshift.io/${i}$) ]|| oc delete is/${i}
           done
 
-    - uses: bcgov/action-oc-runner@v0.3.0
+    - uses: bcgov/action-oc-runner@v1.0.0
       id: deploy
       with:
         oc_namespace: ${{ inputs.oc_namespace }}
@@ -154,7 +154,7 @@ runs:
             oc rollout status deploymentconfig/${DDC} -w
           fi
 
-    - uses: bcgov/action-oc-runner@v0.3.0
+    - uses: bcgov/action-oc-runner@v1.0.0
       with:
         oc_namespace: ${{ inputs.oc_namespace }}
         oc_token: ${{ inputs.oc_token }}
@@ -202,7 +202,7 @@ runs:
           echo -e "\nRoute verification failed"
           exit 1
     
-    - uses: bcgov/action-oc-runner@v0.3.0
+    - uses: bcgov/action-oc-runner@v1.0.0
       if: inputs.post_rollout != ''
       with:
         oc_namespace: ${{ inputs.oc_namespace }}
@@ -214,7 +214,7 @@ runs:
           # Run post deployment command (optional)
           ${{ inputs.post_rollout }}
 
-    - uses: bcgov/action-oc-runner@v0.3.0
+    - uses: bcgov/action-oc-runner@v1.0.0
       if: inputs.delete_completed == 'true'
       with:
         oc_namespace: ${{ inputs.oc_namespace }}

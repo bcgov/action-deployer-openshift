@@ -55,16 +55,6 @@ inputs:
     description: Seconds to wait between deployment verification attempts
     default: "10"
 
-  ### Deprecated
-  # All penetration tests have been deprecated in favour of scheduled jobs
-  penetration_test:
-    default: false
-  # penetration_test_fail:
-  # penetration_test_create_issue:
-  # penetration_test_token:
-  # penetration_test_artifact:
-  # penetration_test_issue:
-
 outputs:
   triggered:
     description: Did a deployment trigger?  [true|false]
@@ -73,10 +63,9 @@ outputs:
 runs:
   using: composite
   steps:
-    # Notify about bugs and deprecations
     - shell: bash
       run: |
-        # Notify about bugs and deprecations
+        # Notify about bugs and/or deprecations
         set -eu
 
         # Bug mitigation - OpenShift hates images with capitals in org/repo names
@@ -84,15 +73,6 @@ runs:
         if [[ $REPO != ${REPO,,} ]]; then
           echo -e "An OpenShift bug prevents capital letters in repo names.\n"
           echo -e "Please handle that using the `repository` parameter.\n"
-          exit 1
-        fi
-
-        # Deprecation notices
-        if [ ! -z ${{ inputs.penetration_test }} != "false" ]; then
-          echo -e "All penetration testing has been deprecated.  Instead we recommend running in a scheduled job. \n"
-          echo -e "Please see https://github.com/zaproxy/action-full-scan for the source action.\n"
-          echo -e "An example of a scheduled job with ZAP penetration testing can be found here:"
-          echo -e "  => https://github.com/bcgov/quickstart-openshift/blob/main/.github/workflows/scheduled.yml\n"
           exit 1
         fi
 

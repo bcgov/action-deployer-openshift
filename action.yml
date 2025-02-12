@@ -100,11 +100,12 @@ runs:
       with:
         repository: ${{ inputs.repository }}
 
-    - uses: bcgov/action-oc-runner@v0.3.0
+    - uses: bcgov/action-oc-runner@v1.0.0
       with:
         oc_namespace: ${{ inputs.oc_namespace }}
         oc_token: ${{ inputs.oc_token }}
         oc_server: ${{ inputs.oc_server }}
+        repository: ${{ inputs.repository }}
         triggers: ${{ inputs.triggers }}
         commands: |
           # Remove any conflicting ImageStreams
@@ -120,12 +121,13 @@ runs:
             [ ! $(oc get is -o name | grep ^imagestream.image.openshift.io/${i}$) ]|| oc delete is/${i}
           done
 
-    - uses: bcgov/action-oc-runner@v0.3.0
+    - uses: bcgov/action-oc-runner@v1.0.0
       id: deploy
       with:
         oc_namespace: ${{ inputs.oc_namespace }}
         oc_token: ${{ inputs.oc_token }}
         oc_server: ${{ inputs.oc_server }}
+        repository: ${{ inputs.repository }}
         triggers: ${{ inputs.triggers }}
         commands: |
           # Expand for deployment steps
@@ -152,11 +154,12 @@ runs:
             oc rollout status deploymentconfig/${DDC} -w
           fi
 
-    - uses: bcgov/action-oc-runner@v0.3.0
+    - uses: bcgov/action-oc-runner@v1.0.0
       with:
         oc_namespace: ${{ inputs.oc_namespace }}
         oc_token: ${{ inputs.oc_token }}
         oc_server: ${{ inputs.oc_server }}
+        repository: ${{ inputs.repository }}
         triggers: ${{ inputs.triggers }}
         commands: |
           # Expand for route verification
@@ -199,18 +202,19 @@ runs:
           echo -e "\nRoute verification failed"
           exit 1
     
-    - uses: bcgov/action-oc-runner@v0.3.0
+    - uses: bcgov/action-oc-runner@v1.0.0
       if: inputs.post_rollout != ''
       with:
         oc_namespace: ${{ inputs.oc_namespace }}
         oc_token: ${{ inputs.oc_token }}
         oc_server: ${{ inputs.oc_server }}
+        repository: ${{ inputs.repository }}
         triggers: ${{ inputs.triggers }}
         commands: |
           # Run post deployment command (optional)
           ${{ inputs.post_rollout }}
 
-    - uses: bcgov/action-oc-runner@v0.3.0
+    - uses: bcgov/action-oc-runner@v1.0.0
       if: inputs.delete_completed == 'true'
       with:
         oc_namespace: ${{ inputs.oc_namespace }}

@@ -117,7 +117,7 @@ runs:
 
           # Apply (overwrites) or create (does not overwrite) using processed template
           TEMPLATE="$(oc process -f ${{ inputs.file }} ${{ inputs.parameters }} --local)"
-          if [ "${{ inputs.overwrite }}" == "true" ]; then
+          if [ "${{ inputs.overwrite }}" != "false" ]; then
             oc apply --timeout=${{ inputs.timeout || '15m' }} -f - <<< "${TEMPLATE}"
           else
             # Suppress AlreadyExists errors and expected failure

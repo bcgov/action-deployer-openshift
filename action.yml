@@ -66,13 +66,12 @@ runs:
     - shell: bash
       run: |
         # Notify about bugs and/or deprecations
-        set -eu
 
         # Bug mitigation - OpenShift hates images with capitals in org/repo names
         REPO=${{ inputs.repository }}
         if [[ $REPO != ${REPO,,} ]]; then
           echo -e "An OpenShift bug prevents capital letters in repo names.\n"
-          echo -e "Please handle that using the `repository` parameter.\n"
+          echo -e "Please handle that using the `inputs.repository` parameter.\n"
           exit 1
         fi
 
@@ -114,16 +113,15 @@ runs:
         commands: |
           # Expand for deployment steps
 
-          # Allow pipefail, since we could be catching oc create errors
-          set +o pipefail
-
           # Apply (overwrites) or create (does not overwrite) using processed template
           TEMPLATE="$(oc process -f ${{ inputs.file }} ${{ inputs.parameters }} --local)"
           if [ "${{ inputs.overwrite }}" != "false" ]; then
+            echo "Overwrite=true; using oc apply"
             oc apply --timeout=${{ inputs.timeout || '15m' }} -f - <<< "${TEMPLATE}"
           else
-            # Suppress AlreadyExists errors and expected failure
-            oc create -f - 2>&1 <<< "${TEMPLATE}" | sed 's/.*: //'
+            # Allow AlreadyExists errors and expected failures
+            echo "Overwrite=false; using oc create"
+            (set +o pipefail; oc create -f - 2>&1 <<< "${TEMPLATE}" | sed 's/.*: //')
           fi
 
           # Deployment and Route Host from template (note: DeploymentConfig is deprecated, but still supported)

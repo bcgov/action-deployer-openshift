@@ -40,9 +40,6 @@ Testing has only been done with public containers on ghcr.io (GitHub Container R
 
 
     ### Typical / recommended
-
-    # Override GitHub default oc version
-    oc_version: "4.13"
     
     # Template parameters/variables to pass
     parameters: -p ZONE=${{ github.event.number }}
@@ -79,6 +76,9 @@ Testing has only been done with public containers on ghcr.io (GitHub Container R
     # Overrides the default branch to diff against
     # Defaults to the default branch, usually `main`
     diff_branch: ${{ github.event.repository.default_branch }}
+
+    # Override default OpenShift CLI (oc) version; e.g. 4.13
+    oc_version: "4.13"
 
     # Repository to clone and process
     # Useful for consuming other repos, defaults to the current one

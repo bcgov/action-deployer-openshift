@@ -113,15 +113,14 @@ runs:
         commands: |
           # Expand for deployment steps
 
-          # Allow pipefail, since we could be catching oc create errors
-          set -o pipefail
-
           # Apply (overwrites) or create (does not overwrite) using processed template
           TEMPLATE="$(oc process -f ${{ inputs.file }} ${{ inputs.parameters }} --local)"
           if [ "${{ inputs.overwrite }}" != "false" ]; then
+            echo "Overwrite=true; using oc apply"
             oc apply --timeout=${{ inputs.timeout || '15m' }} -f - <<< "${TEMPLATE}"
           else
             # Suppress AlreadyExists errors and expected failure
+            echo "Overwrite=false; using oc create"
             oc create -f - 2>&1 <<< "${TEMPLATE}" | sed 's/.*: //'
           fi
 

@@ -130,7 +130,7 @@ runs:
           # Follow any active rollouts; temporary support for DeploymentConfigs
           if [ ! -z "${DDC}" ]&&[ ! -z $(oc get deployment ${DDC} -o name --ignore-not-found) ]; then
             oc rollout status deployment/${DDC} -w
-          elif [ ! -z "${DDC}" ]&&[ ! -z $(oc get deploymengaptconfig ${DDC} -o name --ignore-not-found) ]; then
+          elif [ ! -z "${DDC}" ]&&[ ! -z $(oc get deploymentconfig ${DDC} -o name --ignore-not-found) ]; then
             oc rollout status deploymentconfig/${DDC} -w
           fi
 

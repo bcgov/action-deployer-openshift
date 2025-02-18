@@ -119,9 +119,9 @@ runs:
             echo "Overwrite=true; using oc apply"
             oc apply --timeout=${{ inputs.timeout || '15m' }} -f - <<< "${TEMPLATE}"
           else
-            # Allow AlreadyExists errors and expected failure
+            # Allow AlreadyExists errors and expected failures
             echo "Overwrite=false; using oc create"
-            (set +o pipefail; oc create -f - 2>&1 <<< "${TEMPLATE}" | true)
+            set +o pipefail; oc create -f - 2>&1 <<< "${TEMPLATE}" | sed 's/.*: //'
           fi
 
           # Deployment and Route Host from template (note: DeploymentConfig is deprecated, but still supported)

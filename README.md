@@ -83,17 +83,6 @@ Testing has only been done with public containers on ghcr.io (GitHub Container R
     # Repository to clone and process
     # Useful for consuming other repos, defaults to the current one
     repository: ${{ github.repository }}
-
-    ### Deprecated / will fail and provide directions
-
-    # All penetration tests have been deprecated in favour of scheduled jobs or even workflow_dispatch
-    # Please see https://github.com/zaproxy/action-full-scan for the source of the upstream action
-    penetration_test:
-    penetration_test_artifact:
-    penetration_test_create_issue:
-    penetration_test_fail:
-    penetration_test_issue:
-    penetration_test_token:
 ```
 
 # Example, Single Template

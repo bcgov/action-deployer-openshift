@@ -18,13 +18,11 @@ inputs:
   oc_token:
     description: OpenShift access token
     required: true
+
+  ### Typical / recommended
   overwrite:
     description: Replace existing objects/artifacts? (true|false)
     required: true
-
-  ### Typical / recommended
-  oc_version:
-    description: Non-default OpenShift version; e.g. 4.13
   parameters:
     description: Template parameters/variables to pass (e.g. -p ZONE=...)
   post_rollout:
@@ -45,6 +43,8 @@ inputs:
   diff_branch:
     description: Branch to diff against
     default: ${{ github.event.repository.default_branch }}
+  oc_version:
+    description: Non-default OpenShift version; e.g. 4.13
   repository:
     description: Optionally, specify a different repo to clone
     default: ${{ github.repository }}
@@ -85,6 +85,7 @@ runs:
         oc_namespace: ${{ inputs.oc_namespace }}
         oc_token: ${{ inputs.oc_token }}
         oc_server: ${{ inputs.oc_server }}
+        oc_version: ${{ inputs.oc_version }}
         repository: ${{ inputs.repository }}
         triggers: ${{ inputs.triggers }}
         commands: |
@@ -107,6 +108,7 @@ runs:
         oc_namespace: ${{ inputs.oc_namespace }}
         oc_token: ${{ inputs.oc_token }}
         oc_server: ${{ inputs.oc_server }}
+        oc_version: ${{ inputs.oc_version }}
         repository: ${{ inputs.repository }}
         triggers: ${{ inputs.triggers }}
         commands: |
@@ -117,7 +119,7 @@ runs:
 
           # Apply (overwrites) or create (does not overwrite) using processed template
           TEMPLATE="$(oc process -f ${{ inputs.file }} ${{ inputs.parameters }} --local)"
-          if [ "${{ inputs.overwrite }}" == "true" ]; then
+          if [ "${{ inputs.overwrite }}" != "false" ]; then
             oc apply --timeout=${{ inputs.timeout || '15m' }} -f - <<< "${TEMPLATE}"
           else
             # Suppress AlreadyExists errors and expected failure
@@ -139,6 +141,7 @@ runs:
         oc_namespace: ${{ inputs.oc_namespace }}
         oc_token: ${{ inputs.oc_token }}
         oc_server: ${{ inputs.oc_server }}
+        oc_version: ${{ inputs.oc_version }}
         repository: ${{ inputs.repository }}
         triggers: ${{ inputs.triggers }}
         commands: |
@@ -188,6 +191,7 @@ runs:
         oc_namespace: ${{ inputs.oc_namespace }}
         oc_token: ${{ inputs.oc_token }}
         oc_server: ${{ inputs.oc_server }}
+        oc_version: ${{ inputs.oc_version }}
         repository: ${{ inputs.repository }}
         triggers: ${{ inputs.triggers }}
         commands: |
@@ -200,6 +204,7 @@ runs:
         oc_namespace: ${{ inputs.oc_namespace }}
         oc_token: ${{ inputs.oc_token }}
         oc_server: ${{ inputs.oc_server }}
+        oc_version: ${{ inputs.oc_version }}
         triggers: ${{ inputs.triggers }}
         commands: |
           # Cleanup completed pods

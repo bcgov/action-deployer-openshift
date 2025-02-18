@@ -18,11 +18,11 @@ inputs:
   oc_token:
     description: OpenShift access token
     required: true
+
+  ### Typical / recommended
   overwrite:
     description: Replace existing objects/artifacts? (true|false)
     required: true
-
-  ### Typical / recommended
   parameters:
     description: Template parameters/variables to pass (e.g. -p ZONE=...)
   post_rollout:

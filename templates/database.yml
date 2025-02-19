@@ -27,7 +27,8 @@ objects:
     metadata:
       name: "${NAME}-${ZONE}-${COMPONENT}"
       labels:
-        app: "${NAME}-${ZONE}"
+        app: ${NAME}-${ZONE}
+        component: ${COMPONENT}
     stringData:
       database-name: "${NAME}"
       database-password: "${DB_PASSWORD}"
@@ -37,6 +38,8 @@ objects:
     metadata:
       name: allow-from-openshift-ingress
       labels:
+        app: ${NAME}-${ZONE}
+        component: ${COMPONENT}
         template: openshift-test
     spec:
       podSelector: {}
@@ -52,6 +55,8 @@ objects:
     metadata:
       name: allow-same-namespace
       labels:
+        app: ${NAME}-${ZONE}
+        component: ${COMPONENT}
         template: quickstart-network-security-policy
     spec:
       podSelector: {}
@@ -65,7 +70,8 @@ objects:
     metadata:
       name: "${NAME}-${ZONE}-${COMPONENT}"
       labels:
-        app: "${NAME}-${ZONE}"
+        app: ${NAME}-${ZONE}
+        component: ${COMPONENT}
     spec:
       accessModes:
         - ReadWriteOnce
@@ -78,7 +84,8 @@ objects:
     metadata:
       name: "${NAME}-${ZONE}-${COMPONENT}"
       labels:
-        app: "${NAME}-${ZONE}"
+        app: ${NAME}-${ZONE}
+        component: ${COMPONENT}
     spec:
       replicas: 1
       selector:
@@ -93,7 +100,8 @@ objects:
         metadata:
           name: "${NAME}-${ZONE}-${COMPONENT}"
           labels:
-            app: "${NAME}-${ZONE}"
+            app: ${NAME}-${ZONE}
+            component: ${COMPONENT}
             deployment: "${NAME}-${ZONE}-${COMPONENT}"
         spec:
           volumes:
@@ -158,7 +166,8 @@ objects:
     kind: Service
     metadata:
       labels:
-        app: "${NAME}-${ZONE}"
+        app: ${NAME}-${ZONE}
+        component: ${COMPONENT}
       name: "${NAME}-${ZONE}-${COMPONENT}"
     spec:
       ports:

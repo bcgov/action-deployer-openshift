@@ -37,7 +37,8 @@ objects:
     apiVersion: apps/v1
     metadata:
       labels:
-        app: "${NAME}-${ZONE}"
+        app: ${NAME}-${ZONE}
+        component: ${COMPONENT}
       name: "${NAME}-${ZONE}-${COMPONENT}"
     spec:
       replicas: 1
@@ -49,7 +50,8 @@ objects:
       template:
         metadata:
           labels:
-            app: "${NAME}-${ZONE}"
+            app: ${NAME}-${ZONE}
+            component: ${COMPONENT}
             deployment: "${NAME}-${ZONE}-${COMPONENT}"
         spec:
           containers:
@@ -110,7 +112,8 @@ objects:
     kind: Service
     metadata:
       labels:
-        app: "${NAME}-${ZONE}"
+        app: ${NAME}-${ZONE}
+        component: ${COMPONENT}
       name: "${NAME}-${ZONE}-${COMPONENT}"
     spec:
       ports:
@@ -124,7 +127,8 @@ objects:
     kind: Route
     metadata:
       labels:
-        app: "${NAME}-${ZONE}"
+        app: ${NAME}-${ZONE}
+        component: ${COMPONENT}
       name: "${NAME}-${ZONE}-${COMPONENT}"
     spec:
       host: "${NAME}-${ZONE}-${COMPONENT}.${DOMAIN}"
@@ -140,6 +144,9 @@ objects:
   - apiVersion: autoscaling/v2
     kind: HorizontalPodAutoscaler
     metadata:
+      labels:
+        app: ${NAME}-${ZONE}
+        component: ${COMPONENT}
       name: "${NAME}-${ZONE}-${COMPONENT}"
     spec:
       scaleTargetRef:

@@ -226,7 +226,7 @@ Object-types filtered out:
 - PodDisruptionBudget
 
 Deployment replicas:
-- Limited to 1.
+- Limited to 1
 
 ```yaml
 lite_mode: "true"

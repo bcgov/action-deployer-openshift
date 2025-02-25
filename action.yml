@@ -116,6 +116,8 @@ runs:
         commands: |
           # Expand for deployment steps
 
+          set -x
+
           # Apply (overwrites) or create (does not overwrite) using processed template
           TEMPLATE="$(oc process -f ${{ inputs.file }} ${{ inputs.parameters }} --local)"
 
@@ -124,7 +126,7 @@ runs:
             TEMPLATE=$(echo "${TEMPLATE}" | jq 'del(.items[] | select(.kind=="HorizontalPodAutoscaler"))')
             TEMPLATE=$(echo "${TEMPLATE}" | jq 'del(.items[] | select(.kind=="PodDisruptionBudget"))')
 
-            echo -e "\Development mode; limiting deployment replicas to 1"
+            echo -e "\nDevelopment mode; limiting deployment replicas to 1"
             TEMPLATE=$(echo "${TEMPLATE}" | jq '.items[] | select(.kind=="Deployment").spec.replicas=1')
           fi
           

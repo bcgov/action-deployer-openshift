@@ -44,10 +44,6 @@ Testing has only been done with public containers on ghcr.io (GitHub Container R
     # Template parameters/variables to pass
     parameters: -p ZONE=${{ github.event.number }}
 
-    # Run a command after OpenShift deployment and any verifications
-    # Useful for cronjobs and migrations
-    post_rollout: oc create job "thing-$(date +%s)" --from=cronjob/thing
-
     # Timeout seconds, only affects the OpenShift deployment (apply/create)
     # Default = "15m"
     timeout: "15m"
@@ -154,7 +150,7 @@ steps:
 
 # Example, Matrix / Post Rollout
 
-Deploy and run a command (post hook).  When values for `post_rollout`, `overwrite` and `triggers` are not provided defaults will be used.  This is convenient, but unintuitive.
+Deploy and run a command (post hook).  When values (e.g. overwrite, triggers) are not provided defaults will be used.  This is convenient, but unintuitive.
 
 ```yaml
 deploys:
@@ -170,7 +166,6 @@ runs-on: ubuntu-24.04
       - name: frontend
         file: frontend/openshift.deploy.yml
         parameters: -p MIN_REPLICAS=1 -p MAX_REPLICAS=2
-        post_rollout: oc create job "backend-$(date +%s)" --from=cronjob/backend
         triggers: ('backend/', 'frontend/')
 steps:
   - name: Deploys
@@ -183,7 +178,6 @@ steps:
       oc_token: ${{ secrets.OC_TOKEN }}
       overwrite: ${{ matrix.overwrite }}
       parameters: ${{ matrix.parameters }}
-      post_rollout: ${{ matrix.post_rollout }}
       triggers: ${{ matrix.triggers }}
 ```
 
@@ -241,9 +235,15 @@ The action will return a boolean (true|false) of whether a deployment has been t
     echo "Triggered = ${{ steps.meaningful_id_name.outputs.triggered }}"
 ```
 
-# OpenShift Deployment Config Deprecation
+# Deprecations
+
+## Deployment Configs
 
 The DeploymentConfig API has been [deprecated by Red Hat](https://access.redhat.com/articles/7041372).  If this action is used to deploy a template containing DeploymentConfig objects, it will provide an error message and exit.
+
+## Post Rollout Commands
+
+Post rollout commands have been deprecated.  This functionality is better served by our [bcgov/action-oc-runner](https://github.com/bcgov/action-oc-runner) action.
 
 # Troubleshooting
 

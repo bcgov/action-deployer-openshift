@@ -25,8 +25,6 @@ inputs:
     required: true
   parameters:
     description: Template parameters/variables to pass (e.g. -p ZONE=...)
-  post_rollout:
-    description: Post deployment command; e.g. oc create job "thing-$(date +%s)" --from=cronjob/thing
   timeout:
     description: Timeout for deployment. [default=15m]
     default: "15m"
@@ -200,19 +198,6 @@ runs:
           done
           echo -e "\nRoute verification failed"
           exit 1
-    
-    - uses: bcgov/action-oc-runner@v1.0.0
-      if: inputs.post_rollout != ''
-      with:
-        oc_namespace: ${{ inputs.oc_namespace }}
-        oc_token: ${{ inputs.oc_token }}
-        oc_server: ${{ inputs.oc_server }}
-        oc_version: ${{ inputs.oc_version }}
-        repository: ${{ inputs.repository }}
-        triggers: ${{ inputs.triggers }}
-        commands: |
-          # Run post deployment command (optional)
-          ${{ inputs.post_rollout }}
 
     - uses: bcgov/action-oc-runner@v1.0.0
       if: inputs.delete_completed == 'true'

@@ -37,11 +37,6 @@ Testing has only been done with public containers on ghcr.io (GitHub Container R
 
     ### Typical / recommended
     
-    # Development mode; useful for pull requests (PRs) and other lighter-resourced environments.
-    # Skips prod-typical objects (HorizontalPodAutoscaler, PodDisruptionBudget) 
-    # and limits deployment replicas to 1
-    lite_mode: "false"
-    
     # Overwrite objects using `oc apply` or only create with `oc create`
     # Expected errors from `oc create` are handled with `set +o pipefail`
     overwrite: "true"
@@ -92,7 +87,7 @@ Testing has only been done with public containers on ghcr.io (GitHub Container R
 
 # Example, Single Template
 
-Deploy a single template.  Multiple GitHub secrets are used.  Dev mode enabled.
+Deploy a single template.  Multiple GitHub secrets are used.
 
 ```yaml
 deploys:
@@ -102,7 +97,6 @@ deploys:
     - name: Deploys
       uses: bcgov/action-deployer-openshift.yml@X.Y.Z
       with:
-        lite_mode: true
         file: frontend/openshift.deploy.yml
         oc_namespace: ${{ vars.OC_NAMESPACE }}
         oc_server: ${{ vars.OC_SERVER }}
@@ -219,18 +213,15 @@ deploys:
 
 # Lite Mode
 
-Lite mode is for pull request (PR) and other resource-limited environments.  This is an alternative to setting min and max replicas to 1, which can generate errors.
+Lite mode will automatically be enabled for all pull request (PR) deployments.  This is ideal for resource-limited environments.  Please note that some alternatives, like setting min and max replicas to 1, tend to generate errors.
 
 Object-types filtered out:
 - HorizontalPodAutoscaler
 - PodDisruptionBudget
 
-Deployment replicas:
-- Limited to 1
-
-```yaml
-lite_mode: "true"
-```
+Deployment modifications:
+- Replicas limited to 1 (deployment.spec.replicas)
+- Rollout strategy limited to `Recreate` (deployment.spec.strategy.type)
 
 # Route Verification
 

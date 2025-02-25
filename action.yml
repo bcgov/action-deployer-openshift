@@ -20,9 +20,6 @@ inputs:
     required: true
 
   ### Typical / recommended
-  lite_mode:
-    description: Lite mode; skips prod-typical objects and limits deployment replicas to 1 (true|false)
-    default: false
   overwrite:
     description: Replace existing objects/artifacts? (true|false)
     required: true
@@ -121,7 +118,7 @@ runs:
           # Apply (overwrites) or create (does not overwrite) using processed template
           TEMPLATE="$(oc process -f ${{ inputs.file }} ${{ inputs.parameters }} --local)"
 
-          if [ "${{ inputs.lite_mode }}" == "true" ]; then
+          if [ "${{ github.event_name == 'pull_request' }}" ]; then
             echo -e "\nDevelopment mode; skipping HorizontalPodAutoscaler and PodDisruptionBudget objects"
             TEMPLATE=$(echo "${TEMPLATE}" | jq 'del(.items[] | select(.kind=="HorizontalPodAutoscaler"))')
             TEMPLATE=$(echo "${TEMPLATE}" | jq 'del(.items[] | select(.kind=="PodDisruptionBudget"))')
@@ -143,13 +140,13 @@ runs:
           fi
 
           # Deployment and Route Host from template (note: DeploymentConfig is deprecated, but still supported)
-          DCC=$(echo "${TEMPLATE}" | jq '.items[] | select(.kind=="Deployment").metadata.name //empty')
+          DEPLOYMENT=$(echo "${TEMPLATE}" | jq '.items[] | select(.kind=="Deployment").metadata.name //empty')
 
           # Follow any active rollouts; temporary support for DeploymentConfigs
-          if [ ! -z "${DDC}" ]&&[ ! -z $(oc get deployment ${DDC} -o name --ignore-not-found) ]; then
-            oc rollout status deployment/${DDC} -w
-          elif [ ! -z "${DDC}" ]&&[ ! -z $(oc get deploymentconfig ${DDC} -o name --ignore-not-found) ]; then
-            oc rollout status deploymentconfig/${DDC} -w
+          if [ ! -z "${DEPLOYMENT}" ]&&[ ! -z $(oc get deployment ${DEPLOYMENT} -o name --ignore-not-found) ]; then
+            oc rollout status deployment/${DEPLOYMENT} -w
+          elif [ ! -z "${DEPLOYMENT}" ]&&[ ! -z $(oc get deploymentconfig ${DEPLOYMENT} -o name --ignore-not-found) ]; then
+            oc rollout status deploymentconfig/${DEPLOYMENT} -w
           fi
 
     - uses: bcgov/action-oc-runner@v1.0.0

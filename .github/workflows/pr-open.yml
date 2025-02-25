@@ -23,7 +23,6 @@ jobs:
         include:
           - name: backend
             file: templates/backend.yml
-            lite_mode: true
             overwrite: true
             verification_path: /api
           - name: database
@@ -41,7 +40,6 @@ jobs:
         uses: ./
         with:
           file: ${{ matrix.file }}
-          lite_mode: ${{ matrix.lite_mode }}
           oc_namespace: ${{ vars.OC_NAMESPACE }}
           oc_server: ${{ vars.OC_SERVER }}
           oc_token: ${{ secrets.OC_TOKEN }}

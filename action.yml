@@ -20,8 +20,8 @@ inputs:
     required: true
 
   ### Typical / recommended
-  dev_mode:
-    description: Development mode; skips prod-typical objects and limits deployment replicas to 1 (true|false)
+  lite_mode:
+    description: Lite mode; skips prod-typical objects and limits deployment replicas to 1 (true|false)
     default: false
   overwrite:
     description: Replace existing objects/artifacts? (true|false)
@@ -119,7 +119,7 @@ runs:
           # Apply (overwrites) or create (does not overwrite) using processed template
           TEMPLATE="$(oc process -f ${{ inputs.file }} ${{ inputs.parameters }} --local)"
 
-          if [ "${{ inputs.dev_mode }}" == "true" ]; then
+          if [ "${{ inputs.lite_mode }}" == "true" ]; then
             echo -e "\nDevelopment mode; skipping HorizontalPodAutoscaler and PodDisruptionBudget objects"
             TEMPLATE=$(echo "${TEMPLATE}" | jq 'del(.items[] | select(.kind=="HorizontalPodAutoscaler"))')
             TEMPLATE=$(echo "${TEMPLATE}" | jq 'del(.items[] | select(.kind=="PodDisruptionBudget"))')

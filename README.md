@@ -40,7 +40,7 @@ Testing has only been done with public containers on ghcr.io (GitHub Container R
     # Development mode; useful for pull requests (PRs) and other lighter-resourced environments.
     # Skips prod-typical objects (HorizontalPodAutoscaler, PodDisruptionBudget) 
     # and limits deployment replicas to 1
-    dev_mode: "false"
+    lite_mode: "false"
     
     # Overwrite objects using `oc apply` or only create with `oc create`
     # Expected errors from `oc create` are handled with `set +o pipefail`
@@ -102,7 +102,7 @@ deploys:
     - name: Deploys
       uses: bcgov/action-deployer-openshift.yml@X.Y.Z
       with:
-        dev_mode: true
+        lite_mode: true
         file: frontend/openshift.deploy.yml
         oc_namespace: ${{ vars.OC_NAMESPACE }}
         oc_server: ${{ vars.OC_SERVER }}
@@ -217,20 +217,19 @@ deploys:
         verification_url: health
 ```
 
-# Dev Mode
+# Lite Mode
 
-Development mode is for lighter-resourced environments, like pull requests (PRs).
+Lite mode is for pull request (PR) and other resource-limited environments.  This is an alternative to setting min and max replicas to 1, which can generate errors.
 
 Object-types filtered out:
 - HorizontalPodAutoscaler
 - PodDisruptionBudget
 
-
 Deployment replicas:
 - Limited to 1.
 
 ```yaml
-dev_mode: "true"
+lite_mode: "true"
 ```
 
 # Route Verification

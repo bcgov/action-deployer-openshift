@@ -17,7 +17,7 @@ Testing has only been done with public containers on ghcr.io (GitHub Container R
 # Usage
 
 ```yaml
-- uses: bcgov/action-deployer-openshift@main
+- uses: bcgov/action-deployer-openshift@X.Y.Z
   with:
     ### Required
 
@@ -33,14 +33,14 @@ Testing has only been done with public containers on ghcr.io (GitHub Container R
     # OpenShift token
     # Usually available as a secret in your project/namespace
     oc_token: ${{ secrets.OC_TOKEN }}
+
+
+    ### Typical / recommended
     
     # Overwrite objects using `oc apply` or only create with `oc create`
     # Expected errors from `oc create` are handled with `set +o pipefail`
     overwrite: "true"
 
-
-    ### Typical / recommended
-    
     # Template parameters/variables to pass
     parameters: -p ZONE=${{ github.event.number }}
 
@@ -56,8 +56,8 @@ Testing has only been done with public containers on ghcr.io (GitHub Container R
     # Optional, defaults to nothing, which forces a build
     triggers: ('frontend/')
     
-    # Sets the health path to be used during deployment verification, does not require the '/' at the begining
-    # Builds a health verification URL, form: <route_via_template>/<verifidation_path>
+    # Sets the health path to be used during deployment verification, does not require the '/' at the beginning
+    # Builds a health verification URL, form: <route_via_template>/<verification_path>
     verification_path: ""
 
     # Number of times to attempt deployment verification
@@ -95,7 +95,7 @@ deploys:
   runs-on: ubuntu-24.04
   steps:
     - name: Deploys
-      uses: bcgov/action-deployer-openshift.yml@main
+      uses: bcgov/action-deployer-openshift.yml@X.Y.Z
       with:
         file: frontend/openshift.deploy.yml
         oc_namespace: ${{ vars.OC_NAMESPACE }}
@@ -138,7 +138,7 @@ runs-on: ubuntu-24.04
         file: common/openshift.init.yml
 steps:
   - name: Deploys
-    uses: bcgov/action-deployer-openshift.yml@main
+    uses: bcgov/action-deployer-openshift.yml@X.Y.Z
     with:
       name: ${{ matrix.name }}
       file: ${{ matrix.file }}
@@ -154,7 +154,7 @@ steps:
 
 # Example, Matrix / Post Rollout
 
-Deploy and run a command (post hook).  Matrix values reference `post_rollout`, `overwrite` and `triggers`, despite not being present for all deployments.  This is acceptable, but unintuitive behaviour.
+Deploy and run a command (post hook).  When values for `post_rollout`, `overwrite` and `triggers` are not provided defaults will be used.  This is convenient, but unintuitive.
 
 ```yaml
 deploys:
@@ -174,7 +174,7 @@ runs-on: ubuntu-24.04
         triggers: ('backend/', 'frontend/')
 steps:
   - name: Deploys
-    uses: bcgov/action-deployer-openshift.yml@main
+    uses: bcgov/action-deployer-openshift.yml@X.Y.Z
     with:
       name: ${{ matrix.name }}
       file: ${{ matrix.file }}
@@ -197,7 +197,7 @@ deploys:
   runs-on: ubuntu-24.04
   steps:
     - name: Deploys
-      uses: bcgov/action-deployer-openshift.yml@main
+      uses: bcgov/action-deployer-openshift.yml@X.Y.Z
       with:
         file: backend/openshift.deploy.yml
         oc_namespace: ${{ vars.OC_NAMESPACE }}
@@ -210,6 +210,22 @@ deploys:
         triggers: ${{ matrix.triggers }}
         verification_url: health
 ```
+
+# Lite Mode for Pull Requests
+
+Pull request (PR) deployments will automatically use lite mode.  This is ideal for resource-limited environments.
+
+Object types removed:
+- HorizontalPodAutoscaler
+- PodDisruptionBudget
+
+Deployment modifications:
+- Replicas limited to 1 (deployment.spec.replicas)
+- Rollout strategy limited to `Recreate` (deployment.spec.strategy.type)
+
+# Route Verification
+
+Deployment templates are parsed for a route.  If found, those routes are verified with a curl command for status code 200 (success).  This ensures that applications are accessible from outside their OpenShift namespace/project.
 
 # Output
 
@@ -225,10 +241,6 @@ The action will return a boolean (true|false) of whether a deployment has been t
     echo "Triggered = ${{ steps.meaningful_id_name.outputs.triggered }}
 ```
 
-# Route Verification
-
-Deployment templates are parsed for a route.  If found, those routes are verified with a curl command for status code 200 (success).  This ensures that applications are accessible from outside their OpenShift namespace/project.
-
 # Troubleshooting
 
 ## Dependabot Pull Requests Failing
@@ -241,4 +253,4 @@ Please contribute your ideas!  [Issues] and [pull requests] are appreciated.
 
 <!-- # Acknowledgements
 
-This Action is provided courtesty of the Forestry Digital Services, part of the Government of British Columbia. -->
+This Action is provided courtesy of the Forestry Digital Services, part of the Government of British Columbia. -->

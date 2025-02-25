@@ -33,14 +33,19 @@ Testing has only been done with public containers on ghcr.io (GitHub Container R
     # OpenShift token
     # Usually available as a secret in your project/namespace
     oc_token: ${{ secrets.OC_TOKEN }}
+
+
+    ### Typical / recommended
+    
+    # Development mode; useful for pull requests (PRs) and other lighter-resourced environments.
+    # Skips prod-typical objects (HorizontalPodAutoscaler, PodDisruptionBudget) 
+    # and limits deployment replicas to 1
+    dev_mode: "false"
     
     # Overwrite objects using `oc apply` or only create with `oc create`
     # Expected errors from `oc create` are handled with `set +o pipefail`
     overwrite: "true"
 
-
-    ### Typical / recommended
-    
     # Template parameters/variables to pass
     parameters: -p ZONE=${{ github.event.number }}
 
@@ -56,8 +61,8 @@ Testing has only been done with public containers on ghcr.io (GitHub Container R
     # Optional, defaults to nothing, which forces a build
     triggers: ('frontend/')
     
-    # Sets the health path to be used during deployment verification, does not require the '/' at the begining
-    # Builds a health verification URL, form: <route_via_template>/<verifidation_path>
+    # Sets the health path to be used during deployment verification, does not require the '/' at the beginning
+    # Builds a health verification URL, form: <route_via_template>/<verification_path>
     verification_path: ""
 
     # Number of times to attempt deployment verification
@@ -87,7 +92,7 @@ Testing has only been done with public containers on ghcr.io (GitHub Container R
 
 # Example, Single Template
 
-Deploy a single template.  Multiple GitHub secrets are used.
+Deploy a single template.  Multiple GitHub secrets are used.  Dev mode enabled.
 
 ```yaml
 deploys:
@@ -97,6 +102,7 @@ deploys:
     - name: Deploys
       uses: bcgov/action-deployer-openshift.yml@main
       with:
+        dev_mode: true
         file: frontend/openshift.deploy.yml
         oc_namespace: ${{ vars.OC_NAMESPACE }}
         oc_server: ${{ vars.OC_SERVER }}
@@ -211,6 +217,26 @@ deploys:
         verification_url: health
 ```
 
+# Dev Mode
+
+Development mode is for lighter-resourced environments, like pull requests (PRs).
+
+Object-types filtered out:
+- HorizontalPodAutoscaler
+- PodDisruptionBudget
+
+
+Deployment replicas:
+- Limited to 1.
+
+```yaml
+dev_mode: "true"
+```
+
+# Route Verification
+
+Deployment templates are parsed for a route.  If found, those routes are verified with a curl command for status code 200 (success).  This ensures that applications are accessible from outside their OpenShift namespace/project.
+
 # Output
 
 The action will return a boolean (true|false) of whether a deployment has been triggered.  It can be useful for follow-up tasks, like verifying job success.
@@ -224,10 +250,6 @@ The action will return a boolean (true|false) of whether a deployment has been t
   run: |
     echo "Triggered = ${{ steps.meaningful_id_name.outputs.triggered }}
 ```
-
-# Route Verification
-
-Deployment templates are parsed for a route.  If found, those routes are verified with a curl command for status code 200 (success).  This ensures that applications are accessible from outside their OpenShift namespace/project.
 
 # Troubleshooting
 

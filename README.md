@@ -238,8 +238,12 @@ The action will return a boolean (true|false) of whether a deployment has been t
 
 - needs: [id]
   run: |
-    echo "Triggered = ${{ steps.meaningful_id_name.outputs.triggered }}
+    echo "Triggered = ${{ steps.meaningful_id_name.outputs.triggered }}"
 ```
+
+# OpenShift Deployment Config Deprecation
+
+The DeploymentConfig API has been [deprecated by Red Hat](https://access.redhat.com/articles/7041372).  They can still be processed with this action, but will not be watched or supported.
 
 # Troubleshooting
 

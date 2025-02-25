@@ -211,11 +211,11 @@ deploys:
         verification_url: health
 ```
 
-# Lite Mode
+# Lite Mode for Pull Requests
 
-Lite mode will automatically be enabled for all pull request (PR) deployments.  This is ideal for resource-limited environments.  Please note that some alternatives, like setting min and max replicas to 1, tend to generate errors.
+Pull request (PR) deployments will automatically use lite mode.  This is ideal for resource-limited environments.
 
-Object-types filtered out:
+Object types removed:
 - HorizontalPodAutoscaler
 - PodDisruptionBudget
 

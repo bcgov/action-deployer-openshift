@@ -113,20 +113,18 @@ runs:
         commands: |
           # Expand for deployment steps
 
-          set -x
-
           # Apply (overwrites) or create (does not overwrite) using processed template
           TEMPLATE="$(oc process -f ${{ inputs.file }} ${{ inputs.parameters }} --local)"
 
           if [ "${{ github.event_name == 'pull_request' }}" ]; then
-            echo -e "\nDevelopment mode; skipping HorizontalPodAutoscaler and PodDisruptionBudget objects"
+            echo -e "\nLite mode; skipping HorizontalPodAutoscaler and PodDisruptionBudget objects"
             TEMPLATE=$(echo "${TEMPLATE}" | jq 'del(.items[] | select(.kind=="HorizontalPodAutoscaler"))')
             TEMPLATE=$(echo "${TEMPLATE}" | jq 'del(.items[] | select(.kind=="PodDisruptionBudget"))')
 
-            echo -e "\nDevelopment mode; limiting deployment replicas to 1"
+            echo -e "\nLite mode; limiting deployment replicas to 1"
             TEMPLATE=$(echo "${TEMPLATE}" | jq '.items |= map(if .kind == "Deployment" then .spec.replicas = 1 else . end)')
 
-            echo -e "\nDevelopment mode; limiting deployment strategy to Recreate"
+            echo -e "\nLite mode; limiting deployment strategy to Recreate"
             TEMPLATE=$(echo "${TEMPLATE}" | jq '.items |= map(if .kind == "Deployment" then .spec.strategy.type = "Recreate" else . end)')
           fi
           

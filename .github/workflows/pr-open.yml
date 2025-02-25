@@ -22,6 +22,7 @@ jobs:
         name: [ backend, database, frontend ]
         include:
           - name: backend
+            dev_mode: true
             file: templates/backend.yml
             overwrite: true
             verification_path: /api
@@ -39,6 +40,7 @@ jobs:
       - id: deploys
         uses: ./
         with:
+          dev_mode: ${{ matrix.dev_mode }}
           file: ${{ matrix.file }}
           oc_namespace: ${{ vars.OC_NAMESPACE }}
           oc_server: ${{ vars.OC_SERVER }}

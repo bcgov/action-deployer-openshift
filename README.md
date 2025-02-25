@@ -65,10 +65,6 @@ Testing has only been done with public containers on ghcr.io (GitHub Container R
 
     ### Usually a bad idea / not recommended
 
-    # Delete completed deployer and job pods?
-    # Defaults to true
-    delete_completed: true
-
     # Overrides the default branch to diff against
     # Defaults to the default branch, usually `main`
     diff_branch: ${{ github.event.repository.default_branch }}
@@ -241,9 +237,9 @@ The action will return a boolean (true|false) of whether a deployment has been t
 
 The DeploymentConfig API has been [deprecated by Red Hat](https://access.redhat.com/articles/7041372).  If this action is used to deploy a template containing DeploymentConfig objects, it will provide an error message and exit.
 
-## Post Rollout Commands
+## Parameters
 
-Post rollout commands have been deprecated.  This functionality is better served by our [bcgov/action-oc-runner](https://github.com/bcgov/action-oc-runner) action.
+The parameters `delete_completed` and `post_rollout` are deprecated.  This functionality is better served by our [bcgov/action-oc-runner](https://github.com/bcgov/action-oc-runner) action.
 
 # Troubleshooting
 

@@ -35,9 +35,6 @@ inputs:
     default: ""
 
   ### Usually a bad idea / not recommended
-  delete_completed:
-    description: Delete completed pods
-    default: true
   diff_branch:
     description: Branch to diff against
     default: ${{ github.event.repository.default_branch }}
@@ -198,18 +195,6 @@ runs:
           done
           echo -e "\nRoute verification failed"
           exit 1
-
-    - uses: bcgov/action-oc-runner@v1.0.0
-      if: inputs.delete_completed == 'true'
-      with:
-        oc_namespace: ${{ inputs.oc_namespace }}
-        oc_token: ${{ inputs.oc_token }}
-        oc_server: ${{ inputs.oc_server }}
-        oc_version: ${{ inputs.oc_version }}
-        triggers: ${{ inputs.triggers }}
-        commands: |
-          # Cleanup completed pods
-          oc delete po --field-selector=status.phase==Succeeded
 
     # Action repo needs to be present for cleanup/tests
     - name: Checkout local repo to make sure action.yml is present

@@ -154,7 +154,7 @@ steps:
 
 # Example, Matrix / Post Rollout
 
-Deploy and run a command (post hook).  Matrix values reference `post_rollout`, `overwrite` and `triggers`, despite not being present for all deployments.  This is acceptable, but unintuitive behaviour.
+Deploy and run a command (post hook).  When values for `post_rollout`, `overwrite` and `triggers` are not provided defaults will be used.  This is convenient, but unintuitive.
 
 ```yaml
 deploys:
@@ -253,4 +253,4 @@ Please contribute your ideas!  [Issues] and [pull requests] are appreciated.
 
 <!-- # Acknowledgements
 
-This Action is provided courtesty of the Forestry Digital Services, part of the Government of British Columbia. -->
+This Action is provided courtesy of the Forestry Digital Services, part of the Government of British Columbia. -->

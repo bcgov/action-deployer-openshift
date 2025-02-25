@@ -17,7 +17,7 @@ Testing has only been done with public containers on ghcr.io (GitHub Container R
 # Usage
 
 ```yaml
-- uses: bcgov/action-deployer-openshift@main
+- uses: bcgov/action-deployer-openshift@X.Y.Z
   with:
     ### Required
 
@@ -100,7 +100,7 @@ deploys:
   runs-on: ubuntu-24.04
   steps:
     - name: Deploys
-      uses: bcgov/action-deployer-openshift.yml@main
+      uses: bcgov/action-deployer-openshift.yml@X.Y.Z
       with:
         dev_mode: true
         file: frontend/openshift.deploy.yml
@@ -144,7 +144,7 @@ runs-on: ubuntu-24.04
         file: common/openshift.init.yml
 steps:
   - name: Deploys
-    uses: bcgov/action-deployer-openshift.yml@main
+    uses: bcgov/action-deployer-openshift.yml@X.Y.Z
     with:
       name: ${{ matrix.name }}
       file: ${{ matrix.file }}
@@ -180,7 +180,7 @@ runs-on: ubuntu-24.04
         triggers: ('backend/', 'frontend/')
 steps:
   - name: Deploys
-    uses: bcgov/action-deployer-openshift.yml@main
+    uses: bcgov/action-deployer-openshift.yml@X.Y.Z
     with:
       name: ${{ matrix.name }}
       file: ${{ matrix.file }}
@@ -203,7 +203,7 @@ deploys:
   runs-on: ubuntu-24.04
   steps:
     - name: Deploys
-      uses: bcgov/action-deployer-openshift.yml@main
+      uses: bcgov/action-deployer-openshift.yml@X.Y.Z
       with:
         file: backend/openshift.deploy.yml
         oc_namespace: ${{ vars.OC_NAMESPACE }}

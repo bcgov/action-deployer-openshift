@@ -23,6 +23,9 @@ inputs:
   dev_mode:
     description: Development mode; skips prod-typical objects (HorizontalPodAutoscaler, PodDisruptionBudget)
     default: false
+  limit_replicas:
+    description: Limit deployment replicas to 1 (true|false)
+    default: false
   overwrite:
     description: Replace existing objects/artifacts? (true|false)
     required: true
@@ -123,6 +126,11 @@ runs:
             echo "Development mode; skipping HorizontalPodAutoscaler and PodDisruptionBudget objects"
             TEMPLATE=$(echo "${TEMPLATE}" | jq 'del(.items[] | select(.kind=="HorizontalPodAutoscaler"))')
             TEMPLATE=$(echo "${TEMPLATE}" | jq 'del(.items[] | select(.kind=="PodDisruptionBudget"))')
+          fi
+
+          if [ "${{ inputs.limit_replicas }}" == "true" ]; then
+            echo "Limiting deployment replicas to 1"
+            TEMPLATE=$(echo "${TEMPLATE}" | jq '.items[] | select(.kind=="Deployment").spec.replicas=1')
           fi
           
           if [ "${{ inputs.overwrite }}" != "false" ]; then

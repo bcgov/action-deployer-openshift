@@ -110,9 +110,8 @@ runs:
     
     - shell: bash
       run: |
-        # Echo ${{ env.TEMPLATE }} as a test
+        # Echo TEMPLATE as a test
         echo "${{ env.TEMPLATE }}"
-        exit 1 # stop here while testing
 
     - uses: bcgov/action-oc-runner@v1.0.0
       id: deploy

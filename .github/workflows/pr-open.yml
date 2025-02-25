@@ -14,20 +14,20 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     outputs:
-      backend: ${{ steps.trigger.outputs.backend }}
-      database: ${{ steps.trigger.outputs.database }}
+      # backend: ${{ steps.trigger.outputs.backend }}
+      # database: ${{ steps.trigger.outputs.database }}
       frontend: ${{ steps.trigger.outputs.frontend }}
     strategy:
       matrix:
-        name: [ backend, database, frontend ]
+        # name: [ backend, database, frontend ]
         include:
-          - name: backend
-            file: templates/backend.yml
-            overwrite: true
-            verification_path: /api
-          - name: database
-            file: templates/database.yml
-            overwrite: false
+          # - name: backend
+          #   file: templates/backend.yml
+          #   overwrite: true
+          #   verification_path: /api
+          # - name: database
+          #   file: templates/database.yml
+          #   overwrite: false
           - name: frontend
             file: templates/frontend.yml
             oc_version: 4.13
@@ -48,14 +48,14 @@ jobs:
       - id: trigger
         run: echo "${{ matrix.name }}=${{ steps.deploys.outputs.triggered }}" >> $GITHUB_OUTPUT
 
-  results:
-    name: Results
-    runs-on: ubuntu-24.04
-    needs: [deploys]
-    steps:
-      - run: |
-          # Expand for outputs
-          echo "Results: ${{ toJson(needs.deploys.outputs) }}"
-          echo "Database triggered: ${{needs.deploys.outputs.database}}"
-          echo "Backend triggered: ${{needs.deploys.outputs.backend}}"
-          echo "Frontend triggered: ${{needs.deploys.outputs.frontend}}"
+  # results:
+  #   name: Results
+  #   runs-on: ubuntu-24.04
+  #   needs: [deploys]
+  #   steps:
+  #     - run: |
+  #         # Expand for outputs
+  #         echo "Results: ${{ toJson(needs.deploys.outputs) }}"
+  #         echo "Database triggered: ${{needs.deploys.outputs.database}}"
+  #         echo "Backend triggered: ${{needs.deploys.outputs.backend}}"
+  #         echo "Frontend triggered: ${{needs.deploys.outputs.frontend}}"

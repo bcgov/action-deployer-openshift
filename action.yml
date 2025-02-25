@@ -65,14 +65,6 @@ runs:
   steps:
     - shell: bash
       run: |
-        # Validate required inputs
-        for input in "file" "oc_namespace" "oc_server" "oc_token"; do
-          if [ -z "${!input}" ]; then
-            echo "Error: Required input '$input' is missing"
-            exit 1
-          fi
-        done
-
         # Validate repository name (OpenShift bug mitigation)
         REPO=${{ inputs.repository }}
         if [[ $REPO != ${REPO,,} ]]; then

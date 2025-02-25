@@ -93,6 +93,13 @@ runs:
           # Process template, consuming variables/parameters
           TEMPLATE="$(oc process -f ${{ inputs.file }} ${{ inputs.parameters }} --local)"
 
+          # Check for deprecated DeploymentConfig objects
+          DC_COUNT=$(echo "${TEMPLATE}" | jq '[.items[] | select(.kind=="DeploymentConfig")] | length')
+          if [ "${DC_COUNT}" -gt 0 ]; then
+            echo "Error: DeploymentConfig objects are deprecated and no longer supported. Please use Deployment objects instead."
+            exit 1
+          fi
+
           # Clean any previous ImageStreams
           IS=$(jq -rn "${TEMPLATE} | .items[] | select(.kind==\"ImageStream\").metadata.name //empty")
           IFS=" " read -ra IS <<< "${IS}"

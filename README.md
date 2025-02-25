@@ -243,7 +243,7 @@ The action will return a boolean (true|false) of whether a deployment has been t
 
 # OpenShift Deployment Config Deprecation
 
-The DeploymentConfig API has been [deprecated by Red Hat](https://access.redhat.com/articles/7041372).  They can still be processed with this action, but will not be watched or supported.
+The DeploymentConfig API has been [deprecated by Red Hat](https://access.redhat.com/articles/7041372).  If this action is used to deploy a template containing DeploymentConfig objects, it will provide an error message and exit.
 
 # Troubleshooting
 

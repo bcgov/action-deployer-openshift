@@ -128,6 +128,9 @@ runs:
 
             echo -e "\nDevelopment mode; limiting deployment replicas to 1"
             TEMPLATE=$(echo "${TEMPLATE}" | jq '.items |= map(if .kind == "Deployment" then .spec.replicas = 1 else . end)')
+
+            echo -e "\nDevelopment mode; limiting deployment strategy to Recreate"
+            TEMPLATE=$(echo "${TEMPLATE}" | jq '.items |= map(if .kind == "Deployment" then .spec.strategy.type = "Recreate" else . end)')
           fi
           
           if [ "${{ inputs.overwrite }}" != "false" ]; then

@@ -127,7 +127,7 @@ runs:
             TEMPLATE=$(echo "${TEMPLATE}" | jq 'del(.items[] | select(.kind=="PodDisruptionBudget"))')
 
             echo -e "\nDevelopment mode; limiting deployment replicas to 1"
-            TEMPLATE=$(echo "${TEMPLATE}" | jq '.items[] | select(.kind=="Deployment").spec.replicas=1')
+            TEMPLATE=$(echo "${TEMPLATE}" | jq '.items |= map(if .kind == "Deployment" then .spec.replicas = 1 else . end)')
           fi
           
           if [ "${{ inputs.overwrite }}" != "false" ]; then

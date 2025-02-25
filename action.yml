@@ -20,6 +20,9 @@ inputs:
     required: true
 
   ### Typical / recommended
+  dev_mode:
+    description: Development mode; skips prod-typical objects (HorizontalPodAutoscaler, PodDisruptionBudget)
+    default: false
   overwrite:
     description: Replace existing objects/artifacts? (true|false)
     required: true
@@ -115,6 +118,13 @@ runs:
 
           # Apply (overwrites) or create (does not overwrite) using processed template
           TEMPLATE="$(oc process -f ${{ inputs.file }} ${{ inputs.parameters }} --local)"
+
+          if [ "${{ inputs.dev_mode }}" == "true" ]; then
+            echo "Development mode; skipping HorizontalPodAutoscaler and PodDisruptionBudget objects"
+            TEMPLATE=$(echo "${TEMPLATE}" | jq 'del(.items[] | select(.kind=="HorizontalPodAutoscaler"))')
+            TEMPLATE=$(echo "${TEMPLATE}" | jq 'del(.items[] | select(.kind=="PodDisruptionBudget"))')
+          fi
+          
           if [ "${{ inputs.overwrite }}" != "false" ]; then
             echo "Overwrite=true; using oc apply"
             oc apply --timeout=${{ inputs.timeout || '15m' }} -f - <<< "${TEMPLATE}"

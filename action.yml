@@ -140,7 +140,7 @@ runs:
           fi
 
           # Deployment and Route Host from template (note: DeploymentConfig is deprecated, but still supported)
-          DDC="$(jq -rn "${TEMPLATE} | .items[] | select([.kind] | inside([\"Deployment\", \"DeploymentConfig\"])).metadata.name //empty")"
+          DCC=$(echo "${TEMPLATE}" | jq '.items[] | select(.kind=="Deployment").metadata.name //empty')
 
           # Follow any active rollouts; temporary support for DeploymentConfigs
           if [ ! -z "${DDC}" ]&&[ ! -z $(oc get deployment ${DDC} -o name --ignore-not-found) ]; then

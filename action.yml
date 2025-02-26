@@ -89,7 +89,7 @@ runs:
           echo "EOF" >> $GITHUB_ENV
 
           # Count the number of Route objects in $TEMPLATE
-          ROUTE_COUNT=$(echo "${TEMPLATE}" | jq '[.items[] | select(.kind=="Route")] | length') >> $GITHUB_ENV
+          echo "ROUTE_COUNT=$(echo \"${TEMPLATE}\" | jq '[.items[] | select(.kind=="Route")] | length')" >> $GITHUB_ENV
 
           # Bug mitigation - Docker hates images with capitals in org/repo names
           echo "REPOSITORY=$(echo "${{ inputs.repository }}" | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV

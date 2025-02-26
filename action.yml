@@ -62,17 +62,12 @@ runs:
       run: |
         # Notify about bugs and/or deprecations
 
-        # Bug mitigation - OpenShift hates images with capitals in org/repo names
-        REPO=${{ inputs.repository }}
-        if [[ $REPO != ${REPO,,} ]]; then
-          echo -e "An OpenShift bug prevents capital letters in repo names.\n"
-          echo -e "Please handle that using the `inputs.repository` parameter.\n"
-          exit 1
-        fi
+        # Bug mitigation - Docker hates images with capitals in org/repo names
+        echo "REPOSITORY=$(echo "${{ inputs.repository }}" | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
 
     - uses: actions/checkout@v4
       with:
-        repository: ${{ inputs.repository }}
+        repository: ${{ env.REPOSITORY }}
 
     - uses: bcgov/action-oc-runner@v1.0.0
       with:
@@ -80,7 +75,7 @@ runs:
         oc_token: ${{ inputs.oc_token }}
         oc_server: ${{ inputs.oc_server }}
         oc_version: ${{ inputs.oc_version }}
-        repository: ${{ inputs.repository }}
+        repository: ${{ env.REPOSITORY }}
         triggers: ${{ inputs.triggers }}
         commands: |
           # Remove any conflicting ImageStreams
@@ -120,7 +115,7 @@ runs:
         oc_token: ${{ inputs.oc_token }}
         oc_server: ${{ inputs.oc_server }}
         oc_version: ${{ inputs.oc_version }}
-        repository: ${{ inputs.repository }}
+        repository: ${{ env.REPOSITORY }}
         triggers: ${{ inputs.triggers }}
         commands: |
           # Expand for deployment steps
@@ -163,7 +158,7 @@ runs:
         oc_token: ${{ inputs.oc_token }}
         oc_server: ${{ inputs.oc_server }}
         oc_version: ${{ inputs.oc_version }}
-        repository: ${{ inputs.repository }}
+        repository: ${{ env.REPOSITORY }}
         triggers: ${{ inputs.triggers }}
         commands: |
           # Expand for route verification

@@ -93,15 +93,12 @@ runs:
           # Clean any previous ImageStreams
           IS=$(jq -rn "${TEMPLATE} | .items[] | select(.kind==\"ImageStream\").metadata.name //empty")
           IFS=" " read -ra IS <<< "${IS}"
-          for i in "${IS[@]}"
-          do
+          for i in "${IS[@]}"; do
             [ ! $(oc get is -o name | grep ^imagestream.image.openshift.io/${i}$) ]|| oc delete is/${i}
           done
 
           # Set template as GitHub environment variable
-          echo "TEMPLATE<<EOF" >> $GITHUB_ENV
-          echo "${TEMPLATE}" >> $GITHUB_ENV
-          echo "EOF" >> $GITHUB_ENV
+          echo "TEMPLATE=${TEMPLATE}" >> $GITHUB_ENV
     
     - shell: bash
       run: |

@@ -94,9 +94,7 @@ runs:
           # Bug mitigation - Docker hates images with capitals in org/repo names
           echo "REPOSITORY=$(echo "${{ inputs.repository }}" | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
 
-    - uses: bcgov/action-oc-runner@v1.0.0
-      id: lite-mode
-      if: github.event_name == 'pull_request'
+    - if: github.event_name == 'pull_request'
       shell: bash
       run: |
         # Apply lite mode modifications for pull requests
@@ -146,9 +144,7 @@ runs:
             oc rollout status deployment/${DEPLOYMENT} -w
           fi
 
-    - uses: bcgov/action-oc-runner@v1.0.0
-      id: verify-routes
-      if: env.ROUTE_COUNT
+    - if: env.ROUTE_COUNT
       shell: bash
       run: |
         function verify_route() {

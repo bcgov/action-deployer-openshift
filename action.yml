@@ -59,7 +59,6 @@ runs:
   using: composite
   steps:
     - uses: bcgov/action-oc-runner@v1.0.0
-      id: prep
       with:
         oc_namespace: ${{ inputs.oc_namespace }}
         oc_token: ${{ inputs.oc_token }}
@@ -116,7 +115,6 @@ runs:
         echo "EOF" >> $GITHUB_ENV
 
     - uses: bcgov/action-oc-runner@v1.0.0
-      id: deploy
       with:
         oc_namespace: ${{ inputs.oc_namespace }}
         oc_token: ${{ inputs.oc_token }}
@@ -126,7 +124,6 @@ runs:
         triggers: ${{ inputs.triggers }}
         commands: |
           # Expand for deployment steps
-
           if [ "${{ inputs.overwrite }}" != "false" ]; then
             echo "Overwrite=true; using oc apply"
             oc apply --timeout=${{ inputs.timeout || '15m' }} -f - <<< "${TEMPLATE}"
@@ -136,10 +133,8 @@ runs:
             (set +o pipefail; oc create -f - 2>&1 <<< "${TEMPLATE}" | sed 's/.*: //')
           fi
 
-          # Deployment and Route Host from template (note: DeploymentConfig objects are deprecated and unsupported)
+          # Follow any active deployments
           DEPLOYMENT=$(echo "${TEMPLATE}" | jq '.items[] | select(.kind=="Deployment").metadata.name //empty')
-
-          # Follow any active rollouts
           if [ ! -z "${DEPLOYMENT}" ]&&[ ! -z $(oc get deployment ${DEPLOYMENT} -o name --ignore-not-found) ]; then
             oc rollout status deployment/${DEPLOYMENT} -w
           fi

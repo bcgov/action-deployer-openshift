@@ -70,6 +70,7 @@ runs:
         repository: ${{ env.REPOSITORY }}
 
     - uses: bcgov/action-oc-runner@v1.0.0
+      id: prep
       with:
         oc_namespace: ${{ inputs.oc_namespace }}
         oc_token: ${{ inputs.oc_token }}
@@ -78,9 +79,7 @@ runs:
         repository: ${{ env.REPOSITORY }}
         triggers: ${{ inputs.triggers }}
         commands: |
-          # Remove any conflicting ImageStreams
-
-          # Process template, consuming variables/parameters
+          # Process template
           TEMPLATE="$(oc process -f ${{ inputs.file }} ${{ inputs.parameters }} --local)"
 
           # Check for deprecated DeploymentConfig objects
@@ -91,21 +90,14 @@ runs:
           fi
 
           # Clean any previous ImageStreams
-          IS=$(jq -rn "${TEMPLATE} | .items[] | select(.kind==\"ImageStream\").metadata.name //empty")
-          IFS=" " read -ra IS <<< "${IS}"
-          for i in "${IS[@]}"; do
-            [ ! $(oc get is -o name | grep ^imagestream.image.openshift.io/${i}$) ]|| oc delete is/${i}
+          for name in $(echo "${TEMPLATE}" | jq -r '.items[] | select(.kind=="ImageStream").metadata.name'); do
+            oc delete imagestream ${name} --ignore-not-found
           done
 
           # Store template in environment variable using heredoc format for multiline values
           echo "TEMPLATE<<EOF" >> $GITHUB_ENV
           echo "${TEMPLATE}" >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
-    
-    - shell: bash
-      run: |
-        # Echo TEMPLATE as a test
-        echo "${TEMPLATE}"
 
     - uses: bcgov/action-oc-runner@v1.0.0
       id: apply-template

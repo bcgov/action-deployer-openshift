@@ -58,17 +58,6 @@ outputs:
 runs:
   using: composite
   steps:
-    - shell: bash
-      run: |
-        # Notify about bugs and/or deprecations
-
-        # Bug mitigation - Docker hates images with capitals in org/repo names
-        echo "REPOSITORY=$(echo "${{ inputs.repository }}" | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
-
-    - uses: actions/checkout@v4
-      with:
-        repository: ${{ env.REPOSITORY }}
-
     - uses: bcgov/action-oc-runner@v1.0.0
       id: prep
       with:
@@ -76,10 +65,10 @@ runs:
         oc_token: ${{ inputs.oc_token }}
         oc_server: ${{ inputs.oc_server }}
         oc_version: ${{ inputs.oc_version }}
-        repository: ${{ env.REPOSITORY }}
+        repository: ${{ inputs.repository }}
         triggers: ${{ inputs.triggers }}
         commands: |
-          # Process template
+          # Process template and variables
           TEMPLATE="$(oc process -f ${{ inputs.file }} ${{ inputs.parameters }} --local)"
 
           # Check for deprecated DeploymentConfig objects
@@ -99,8 +88,12 @@ runs:
           echo "${TEMPLATE}" >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
 
+          # Bug mitigation - Docker hates images with capitals in org/repo names
+          echo "REPOSITORY=$(echo "${{ inputs.repository }}" | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
+
     - uses: bcgov/action-oc-runner@v1.0.0
-      id: apply-template
+      id: lite-mode
+      if: github.event_name == 'pull_request'
       with:
         oc_namespace: ${{ inputs.oc_namespace }}
         oc_token: ${{ inputs.oc_token }}
@@ -109,25 +102,18 @@ runs:
         repository: ${{ env.REPOSITORY }}
         triggers: ${{ inputs.triggers }}
         commands: |
-          # Process template, consuming variables/parameters
-          TEMPLATE="$(oc process -f ${{ inputs.file }} ${{ inputs.parameters }} --local)"
-
           # Apply lite mode modifications for pull requests
-          if [ "${{ github.event_name == 'pull_request' }}" ]; then
-            echo "::group::Applying lite mode modifications for pull request"
-            
-            echo "Removing HorizontalPodAutoscaler and PodDisruptionBudget objects"
-            TEMPLATE=$(echo "${TEMPLATE}" | jq 'del(.items[] | select(.kind=="HorizontalPodAutoscaler"))')
-            TEMPLATE=$(echo "${TEMPLATE}" | jq 'del(.items[] | select(.kind=="PodDisruptionBudget"))')
-
-            echo "Limiting deployment replicas to 1"
-            TEMPLATE=$(echo "${TEMPLATE}" | jq '.items |= map(if .kind == "Deployment" then .spec.replicas = 1 else . end)')
-
-            echo "Setting deployment strategy to Recreate"
-            TEMPLATE=$(echo "${TEMPLATE}" | jq '.items |= map(if .kind == "Deployment" then .spec.strategy.type = "Recreate" else . end)')
-            
-            echo "::endgroup::"
-          fi
+          echo "Applying lite mode modifications"
+          TEMPLATE=$(echo "${TEMPLATE}" | jq '
+            del(.items[] | select(.kind=="HorizontalPodAutoscaler")) |
+            del(.items[] | select(.kind=="PodDisruptionBudget")) |
+            .items |= map(
+              if .kind == "Deployment"
+              then .spec.replicas = 1 | .spec.strategy.type = "Recreate"
+              else .
+              end
+            )'
+          )
 
           # Store template in environment variable using heredoc format for multiline values
           echo "TEMPLATE<<EOF" >> $GITHUB_ENV
@@ -145,9 +131,6 @@ runs:
         triggers: ${{ inputs.triggers }}
         commands: |
           # Expand for deployment steps
-
-          # Apply (overwrites) or create (does not overwrite) using processed template
-          TEMPLATE="$(oc process -f ${{ inputs.file }} ${{ inputs.parameters }} --local)"
 
           if [ "${{ inputs.overwrite }}" != "false" ]; then
             echo "Overwrite=true; using oc apply"
@@ -176,9 +159,6 @@ runs:
         triggers: ${{ inputs.triggers }}
         commands: |
           # Expand for route verification
-
-          # Process template, consuming variables/parameters
-          TEMPLATE="$(oc process -f ${{ inputs.file }} ${{ inputs.parameters }} --local)"
 
           # Output URL (host + path), but only if ROUTE_HOST is populated
           ROUTE_HOST=$(jq -rn "${TEMPLATE} | .items[] | select(.kind==\"Route\").spec.host //empty")

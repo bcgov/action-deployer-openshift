@@ -97,8 +97,10 @@ runs:
             [ ! $(oc get is -o name | grep ^imagestream.image.openshift.io/${i}$) ]|| oc delete is/${i}
           done
 
-          # Set template as GitHub environment variable
-          echo "TEMPLATE=${TEMPLATE}" >> $GITHUB_ENV
+          # Store template in environment variable using heredoc format for multiline values
+          echo "TEMPLATE<<EOF" >> $GITHUB_ENV
+          echo "${TEMPLATE}" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
     
     - shell: bash
       run: |

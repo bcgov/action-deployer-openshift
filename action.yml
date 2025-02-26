@@ -154,7 +154,7 @@ runs:
 
     - uses: bcgov/action-oc-runner@v1.0.0
       id: verify-routes
-      if: ${{ env.ROUTE_COUNT > 0 }}
+      if: env.ROUTE_COUNT
       with:
         oc_namespace: ${{ inputs.oc_namespace }}
         oc_token: ${{ inputs.oc_token }}

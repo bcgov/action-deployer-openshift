@@ -105,7 +105,42 @@ runs:
     - shell: bash
       run: |
         # Echo TEMPLATE as a test
-        echo "${{ env.TEMPLATE }}"
+        echo "${TEMPLATE}"
+
+    - uses: bcgov/action-oc-runner@v1.0.0
+      id: apply-template
+      with:
+        oc_namespace: ${{ inputs.oc_namespace }}
+        oc_token: ${{ inputs.oc_token }}
+        oc_server: ${{ inputs.oc_server }}
+        oc_version: ${{ inputs.oc_version }}
+        repository: ${{ env.REPOSITORY }}
+        triggers: ${{ inputs.triggers }}
+        commands: |
+          # Process template, consuming variables/parameters
+          TEMPLATE="$(oc process -f ${{ inputs.file }} ${{ inputs.parameters }} --local)"
+
+          # Apply lite mode modifications for pull requests
+          if [ "${{ github.event_name == 'pull_request' }}" ]; then
+            echo "::group::Applying lite mode modifications for pull request"
+            
+            echo "Removing HorizontalPodAutoscaler and PodDisruptionBudget objects"
+            TEMPLATE=$(echo "${TEMPLATE}" | jq 'del(.items[] | select(.kind=="HorizontalPodAutoscaler"))')
+            TEMPLATE=$(echo "${TEMPLATE}" | jq 'del(.items[] | select(.kind=="PodDisruptionBudget"))')
+
+            echo "Limiting deployment replicas to 1"
+            TEMPLATE=$(echo "${TEMPLATE}" | jq '.items |= map(if .kind == "Deployment" then .spec.replicas = 1 else . end)')
+
+            echo "Setting deployment strategy to Recreate"
+            TEMPLATE=$(echo "${TEMPLATE}" | jq '.items |= map(if .kind == "Deployment" then .spec.strategy.type = "Recreate" else . end)')
+            
+            echo "::endgroup::"
+          fi
+
+          # Store template in environment variable using heredoc format for multiline values
+          echo "TEMPLATE<<EOF" >> $GITHUB_ENV
+          echo "${TEMPLATE}" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
 
     - uses: bcgov/action-oc-runner@v1.0.0
       id: deploy
@@ -122,18 +157,6 @@ runs:
           # Apply (overwrites) or create (does not overwrite) using processed template
           TEMPLATE="$(oc process -f ${{ inputs.file }} ${{ inputs.parameters }} --local)"
 
-          if [ "${{ github.event_name == 'pull_request' }}" ]; then
-            echo -e "\nLite mode; skipping HorizontalPodAutoscaler and PodDisruptionBudget objects"
-            TEMPLATE=$(echo "${TEMPLATE}" | jq 'del(.items[] | select(.kind=="HorizontalPodAutoscaler"))')
-            TEMPLATE=$(echo "${TEMPLATE}" | jq 'del(.items[] | select(.kind=="PodDisruptionBudget"))')
-
-            echo -e "\nLite mode; limiting deployment replicas to 1"
-            TEMPLATE=$(echo "${TEMPLATE}" | jq '.items |= map(if .kind == "Deployment" then .spec.replicas = 1 else . end)')
-
-            echo -e "\nLite mode; limiting deployment strategy to Recreate"
-            TEMPLATE=$(echo "${TEMPLATE}" | jq '.items |= map(if .kind == "Deployment" then .spec.strategy.type = "Recreate" else . end)')
-          fi
-          
           if [ "${{ inputs.overwrite }}" != "false" ]; then
             echo "Overwrite=true; using oc apply"
             oc apply --timeout=${{ inputs.timeout || '15m' }} -f - <<< "${TEMPLATE}"

@@ -10,9 +10,9 @@
 
 # OpenShift Deployer
 
-Deploy to OpenShift using templates. Most of the heavy lifting here is done in template configuration.
+Deploy to OpenShift using templates.  This action is a wrapper around the OpenShift CLI (oc) and is intended to be used with OpenShift 4.x.
 
-Testing has only been done with public images using ghcr.io (GitHub Container Registry) and hub.docker.com (Docker Hub) so far.
+Testing has only been done with public images (ghcr.io, hub.docker.com) so far.
 
 # Usage
 

@@ -1,5 +1,5 @@
 name: OpenShift Deployer
-description: OpenShift deployer with route verification
+description: OpenShift deployer
 branding:
   icon: package
   color: blue
@@ -30,9 +30,6 @@ inputs:
     default: "15m"
   triggers:
     description: Omit to always build, otherwise trigger by path; e.g. ('./backend/', './frontend/)
-  verification_path:
-    description: Sets the health endpoint to be used for verification, does not need '/'
-    default: ""
 
   ### Usually a bad idea / not recommended
   diff_branch:
@@ -43,12 +40,14 @@ inputs:
   repository:
     description: Optionally, specify a different repo to clone
     default: ${{ github.repository }}
+
+  ### Deprecated
+  verification_path:
+    default: ""
   verification_retry_attempts:
-    description: Number of times to attempt deployment verification
-    default: "3"
+    default: ""
   verification_retry_seconds:
-    description: Seconds to wait between deployment verification attempts
-    default: "10"
+    default: ""
 
 outputs:
   triggered:
@@ -58,6 +57,14 @@ outputs:
 runs:
   using: composite
   steps:
+    # Check for deprecated inputs
+    - if: inputs.verification_path || inputs.verification_retry_attempts || inputs.verification_retry_seconds
+      shell: bash
+      run: |
+        echo "Deprecations"
+        echo "Verification has been deprecated.  Please rely on OpenShift probes instead."
+        exit 1
+
     - uses: bcgov/action-oc-runner@v1.0.0
       with:
         oc_namespace: ${{ inputs.oc_namespace }}
@@ -86,9 +93,6 @@ runs:
           echo "TEMPLATE<<EOF" >> $GITHUB_ENV
           echo "${TEMPLATE}" >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
-
-          # Count the number of Route objects in $TEMPLATE
-          echo "ROUTE_COUNT=$(echo ${TEMPLATE} | jq '[.items[] | select(.kind=="Route")] | length')" >> $GITHUB_ENV
 
           # Bug mitigation - Docker hates images with capitals in org/repo names
           echo "REPOSITORY=$(echo "${{ inputs.repository }}" | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
@@ -138,47 +142,6 @@ runs:
           if [ ! -z "${DEPLOYMENT}" ]&&[ ! -z $(oc get deployment ${DEPLOYMENT} -o name --ignore-not-found) ]; then
             oc rollout status deployment/${DEPLOYMENT} -w
           fi
-
-    - if: env.ROUTE_COUNT
-      shell: bash
-      run: |
-        function verify_route() {
-          local url=$1
-          local attempts=$2
-          local wait_time=$3
-
-          for ((i=1; i<=attempts; i++)); do
-            echo "Verification attempt $i of $attempts"
-            if HTTP_CODE=$(curl -Lso /dev/null -w "%{http_code}" "${url}"); then
-              if [ "${HTTP_CODE}" -eq 200 ]; then
-                echo "Route verification successful!"
-                return 0
-              fi
-            fi
-            echo "HTTP_CODE: ${HTTP_CODE}"
-            [ $i -lt $attempts ] && sleep "${wait_time}"
-          done
-          return 1
-        }
-
-        ROUTE_HOST=$(echo "${TEMPLATE}" | jq -r '.items[] | select(.kind=="Route").spec.host //empty')
-        if [ -z "${ROUTE_HOST}" ]; then
-          echo "No route found. Skipping verification."
-          exit 0
-        fi
-
-        ROUTE_PATH=${{ inputs.verification_path }}
-        if [ -z "${ROUTE_PATH}" ]; then
-          ROUTE_PATH=$(echo "${{ env.template }}" | jq -r '.items[] | select(.kind=="Route").spec.path //empty')
-        fi
-
-        URL=$(echo "${ROUTE_HOST}/${ROUTE_PATH}" | sed 's // / g')
-        echo "Verifying route: http://${URL}"
-
-        if ! verify_route "${URL}" ${{ inputs.verification_retry_attempts }} ${{ inputs.verification_retry_seconds }}; then
-          echo "Route verification failed"
-          exit 1
-        fi
 
     # Action repo needs to be present for cleanup/tests
     - name: Checkout local repo to make sure action.yml is present

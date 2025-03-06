@@ -8,11 +8,11 @@
 [issues]: https://docs.github.com/en/issues/tracking-your-work-with-issues/creating-an-issue
 [pull requests]: https://docs.github.com/en/desktop/contributing-and-collaborating-using-github-desktop/working-with-your-remote-repository-on-github-or-github-enterprise/creating-an-issue-or-pull-request
 
-# OpenShift Deployer with Route Verification
+# OpenShift Deployer
 
-GitHub Action. Deploy to OpenShift using templates. Runs route verification.  Most of the heavy lifting here is done in template configuration.
+Deploy to OpenShift using templates. Most of the heavy lifting here is done in template configuration.
 
-Testing has only been done with public containers on ghcr.io (GitHub Container Registry) so far.
+Testing has only been done with public images using ghcr.io (GitHub Container Registry) and hub.docker.com (Docker Hub) so far.
 
 # Usage
 
@@ -51,16 +51,6 @@ Testing has only been done with public containers on ghcr.io (GitHub Container R
     # Bash array to diff for build triggering
     # Optional, defaults to nothing, which forces a build
     triggers: ('frontend/')
-    
-    # Sets the health path to be used during deployment verification, does not require the '/' at the beginning
-    # Builds a health verification URL, form: <route_via_template>/<verification_path>
-    verification_path: ""
-
-    # Number of times to attempt deployment verification
-    verification_retry_attempts: "3"
-
-    # Seconds to wait between deployment verification attempts
-    verification_retry_seconds: "10"
 
 
     ### Usually a bad idea / not recommended
@@ -198,7 +188,6 @@ deploys:
           -p MIN_REPLICAS=1 -p MAX_REPLICAS=2
           -p PR_NUMBER=${{ github.event.number }}
         triggers: ${{ matrix.triggers }}
-        verification_url: health
 ```
 
 # Lite Mode for Pull Requests
@@ -213,13 +202,9 @@ Deployment modifications:
 - Replicas limited to 1 (deployment.spec.replicas)
 - Rollout strategy limited to `Recreate` (deployment.spec.strategy.type)
 
-# Route Verification
-
-Deployment templates are parsed for a route.  If found, those routes are verified with a curl command for status code 200 (success).  This ensures that applications are accessible from outside their OpenShift namespace/project.
-
 # Output
 
-The action will return a boolean (true|false) of whether a deployment has been triggered.  It can be useful for follow-up tasks, like verifying job success.
+The action will return a boolean (true|false) of whether a deployment has been triggered.  It can be useful for follow-up tasks, like running tests.
 
 ```yaml
 - id: meaningful_id_name
@@ -240,6 +225,8 @@ The DeploymentConfig API has been [deprecated by Red Hat](https://access.redhat.
 ## Parameters
 
 The parameters `delete_completed` and `post_rollout` are deprecated.  This functionality is better served by our [bcgov/action-oc-runner](https://github.com/bcgov/action-oc-runner) action.
+
+The parameters `verification_path`, `verification_retry_attempts` and `verification_retry_seconds` are deprecated.  Please use OpenShift [health checks](https://docs.openshift.com/container-platform/4.18/applications/application-health.html) instead.
 
 # Troubleshooting
 

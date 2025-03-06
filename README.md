@@ -134,9 +134,9 @@ steps:
       triggers: ${{ matrix.triggers }}
 ```
 
-# Example, Matrix / Post Rollout
+# Example, Matrix
 
-Deploy and run a command (post hook).  When values (e.g. overwrite, triggers) are not provided defaults will be used.  This is convenient, but unintuitive.
+Deploy an OpenShift template.  When values (e.g. overwrite, triggers) are not provided defaults will be used.  This is convenient, but unintuitive.
 
 ```yaml
 deploys:

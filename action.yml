@@ -61,8 +61,8 @@ runs:
     - if: inputs.verification_path || inputs.verification_retry_attempts || inputs.verification_retry_seconds
       shell: bash
       run: |
-        echo "Deprecations"
-        echo "Verification has been deprecated.  Please rely on OpenShift probes instead."
+        echo -e "\nDeprecations warning!"
+        echo -e "Verification has been deprecated.  Please rely on OpenShift probes instead.\n"
         exit 1
 
     - uses: bcgov/action-oc-runner@v1.0.0

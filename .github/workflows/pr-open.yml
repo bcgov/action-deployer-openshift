@@ -24,7 +24,6 @@ jobs:
           - name: backend
             file: templates/backend.yml
             overwrite: true
-            verification_path: /api
           - name: database
             file: templates/database.yml
             overwrite: false
@@ -44,7 +43,6 @@ jobs:
           oc_version: ${{ matrix.oc_version }}
           overwrite: ${{ matrix.overwrite }}
           parameters: -p ZONE=${{ github.event.number }} ${{ matrix.parameters }}
-          verification_path: ${{ matrix.verification_path }}
       - id: trigger
         run: echo "${{ matrix.name }}=${{ steps.deploys.outputs.triggered }}" >> $GITHUB_OUTPUT
 

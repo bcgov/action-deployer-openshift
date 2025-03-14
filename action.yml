@@ -41,14 +41,6 @@ inputs:
     description: Optionally, specify a different repo to clone
     default: ${{ github.repository }}
 
-  ### Deprecated
-  verification_path:
-    default: ""
-  verification_retry_attempts:
-    default: ""
-  verification_retry_seconds:
-    default: ""
-
 outputs:
   triggered:
     description: Did a deployment trigger?  [true|false]
@@ -57,14 +49,6 @@ outputs:
 runs:
   using: composite
   steps:
-    # Check for deprecated inputs
-    - if: inputs.verification_path || inputs.verification_retry_attempts || inputs.verification_retry_seconds
-      shell: bash
-      run: |
-        echo -e "\nDeprecations warning!"
-        echo -e "Verification has been deprecated.  Please rely on OpenShift probes instead.\n"
-        exit 1
-
     - uses: bcgov/action-oc-runner@v1.0.0
       with:
         oc_namespace: ${{ inputs.oc_namespace }}

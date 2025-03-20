@@ -122,7 +122,7 @@ runs:
           fi
 
           # Follow any active deployments
-          DEPLOYMENT=$(echo "${TEMPLATE}" | jq '.items[] | select(.kind=="Deployment").metadata.name //empty')
+          DEPLOYMENT=$(echo "${TEMPLATE}" | jq -r '.items[] | select(.kind=="Deployment").metadata.name //empty')
           if [ ! -z "${DEPLOYMENT}" ]&&[ ! -z $(oc get deployment ${DEPLOYMENT} -o name --ignore-not-found) ]; then
             oc rollout status deployment/${DEPLOYMENT} -w
           fi

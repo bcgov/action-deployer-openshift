@@ -53,7 +53,8 @@ jobs:
     steps:
       - run: |
           # Validate outputs
-          if [[ -z "${{ needs.deploys.outputs.database }}" || \
+          if [[ \
+            -z "${{ needs.deploys.outputs.database }}" || \
             -z "${{ needs.deploys.outputs.backend }}" || \
             -z "${{ needs.deploys.outputs.frontend }}" \
           ]]; then

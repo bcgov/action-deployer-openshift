@@ -105,12 +105,8 @@ runs:
 
     - uses: bcgov/action-oc-runner@v1.0.0
       if: steps.triggers.outputs.triggered == 'true'
-      with:
-        oc_namespace: ${{ inputs.oc_namespace }}
-        oc_token: ${{ inputs.oc_token }}
-        oc_server: ${{ inputs.oc_server }}
-        oc_version: ${{ inputs.oc_version }}
-        repository: ${{ env.REPOSITORY }}
+      shell: bash
+      run: |
         commands: |
           # Expand for deployment steps
           if [ "${{ inputs.overwrite }}" != "false" ]; then

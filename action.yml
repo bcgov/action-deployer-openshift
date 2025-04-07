@@ -107,22 +107,21 @@ runs:
       if: steps.triggers.outputs.triggered == 'true'
       shell: bash
       run: |
-        commands: |
-          # Expand for deployment steps
-          if [ "${{ inputs.overwrite }}" != "false" ]; then
-            echo "Overwrite=true; using oc apply"
-            oc apply --timeout=${{ inputs.timeout || '15m' }} -f - <<< "${TEMPLATE}"
-          else
-            # Allow AlreadyExists errors and expected failures
-            echo "Overwrite=false; using oc create"
-            (set +o pipefail; oc create -f - 2>&1 <<< "${TEMPLATE}" | sed 's/.*: //')
-          fi
+        # Expand for deployment steps
+        if [ "${{ inputs.overwrite }}" != "false" ]; then
+          echo "Overwrite=true; using oc apply"
+          oc apply --timeout=${{ inputs.timeout || '15m' }} -f - <<< "${TEMPLATE}"
+        else
+          # Allow AlreadyExists errors and expected failures
+          echo "Overwrite=false; using oc create"
+          (set +o pipefail; oc create -f - 2>&1 <<< "${TEMPLATE}" | sed 's/.*: //')
+        fi
 
-          # Follow any active deployments
-          DEPLOYMENT=$(echo "${TEMPLATE}" | jq -r '.items[] | select(.kind=="Deployment").metadata.name //empty')
-          if [ ! -z "${DEPLOYMENT}" ]&&[ ! -z $(oc get deployment ${DEPLOYMENT} -o name --ignore-not-found) ]; then
-            oc rollout status deployment/${DEPLOYMENT} -w
-          fi
+        # Follow any active deployments
+        DEPLOYMENT=$(echo "${TEMPLATE}" | jq -r '.items[] | select(.kind=="Deployment").metadata.name //empty')
+        if [ ! -z "${DEPLOYMENT}" ]&&[ ! -z $(oc get deployment ${DEPLOYMENT} -o name --ignore-not-found) ]; then
+          oc rollout status deployment/${DEPLOYMENT} -w
+        fi
 
     # Action repo needs to be present for cleanup/tests
     - name: Checkout local repo to make sure action.yml is present

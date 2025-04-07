@@ -52,8 +52,23 @@ jobs:
     needs: [deploys]
     steps:
       - run: |
+          # Validate outputs
+          if [[ -z "${{ needs.deploys.outputs.database }}" || -z "${{ needs.deploys.outputs.backend }}" || -z "${{ needs.deploys.outputs.frontend }}" ]]; then
+            echo "Error: One or more outputs are empty."
+            exit 1
+          fi
+
+          # Ensure outputs are true or false
+          for output in database backend frontend; do
+            value="${{ needs.deploys.outputs[$output] }}"
+            if [[ "$value" != "true" && "$value" != "false" ]]; then
+              echo "Error: Output $output is not true or false. Value: $value"
+              exit 1
+            i
+          done
+
           # Expand for outputs
           echo "Results: ${{ toJson(needs.deploys.outputs) }}"
-          echo "Database triggered: ${{needs.deploys.outputs.database}}"
-          echo "Backend triggered: ${{needs.deploys.outputs.backend}}"
-          echo "Frontend triggered: ${{needs.deploys.outputs.frontend}}"
+          echo "Database triggered: ${{ needs.deploys.outputs.database }}"
+          echo "Backend triggered: ${{ needs.deploys.outputs.backend }}"
+          echo "Frontend triggered: ${{ needs.deploys.outputs.frontend }}"

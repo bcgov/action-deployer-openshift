@@ -103,8 +103,7 @@ runs:
         echo "${TEMPLATE}" >> $GITHUB_ENV
         echo "EOF" >> $GITHUB_ENV
 
-    - uses: bcgov/action-oc-runner@v1.0.0
-      if: steps.triggers.outputs.triggered == 'true'
+    - if: steps.triggers.outputs.triggered == 'true'
       shell: bash
       run: |
         # Expand for deployment steps

@@ -53,13 +53,13 @@ jobs:
     steps:
       - run: |
           # Validate outputs
-          if [[ -z "${{ needs.deploys.outputs.database }}" || -z "${{ needs.deploys.outputs.backend }}" || -z "${{ needs.deploys.outputs.frontend }}" ]]; then
+          if [[ -z "${{ needs.deploys.outputs.database }}" || \
+            -z "${{ needs.deploys.outputs.backend }}" || \
+            -z "${{ needs.deploys.outputs.frontend }}" \
+          ]]; then
             echo "Error: One or more outputs are empty."
             exit 1
           fi
 
           # Expand for outputs
           echo "Results: ${{ toJson(needs.deploys.outputs) }}"
-          echo "Database triggered: ${{ needs.deploys.outputs.database }}"
-          echo "Backend triggered: ${{ needs.deploys.outputs.backend }}"
-          echo "Frontend triggered: ${{ needs.deploys.outputs.frontend }}"

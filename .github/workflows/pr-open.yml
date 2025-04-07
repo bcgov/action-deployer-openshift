@@ -58,15 +58,6 @@ jobs:
             exit 1
           fi
 
-          # Ensure outputs are true or false
-          for output in database backend frontend; do
-            value="${{ needs.deploys.outputs[$output] }}"
-            if [[ "$value" != "true" && "$value" != "false" ]]; then
-              echo "Error: Output $output is not true or false. Value: $value"
-              exit 1
-            i
-          done
-
           # Expand for outputs
           echo "Results: ${{ toJson(needs.deploys.outputs) }}"
           echo "Database triggered: ${{ needs.deploys.outputs.database }}"

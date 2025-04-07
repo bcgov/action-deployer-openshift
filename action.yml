@@ -44,7 +44,7 @@ inputs:
 outputs:
   triggered:
     description: Did a deployment trigger?  [true|false]
-    value: ${{ steps.deploy.outputs.triggered }}
+    value: ${{ steps.triggers.outputs.triggered }}
 
 runs:
   using: composite

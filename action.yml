@@ -44,12 +44,13 @@ inputs:
 outputs:
   triggered:
     description: Did a deployment trigger?  [true|false]
-    value: ${{ steps.deploy.outputs.triggered }}
+    value: ${{ steps.triggers.outputs.triggered }}
 
 runs:
   using: composite
   steps:
     - uses: bcgov/action-oc-runner@v1.0.0
+      id: triggers
       with:
         oc_namespace: ${{ inputs.oc_namespace }}
         oc_token: ${{ inputs.oc_token }}
@@ -81,7 +82,7 @@ runs:
           # Bug mitigation - Docker hates images with capitals in org/repo names
           echo "REPOSITORY=$(echo "${{ inputs.repository }}" | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
 
-    - if: github.event_name == 'pull_request'
+    - if: github.event_name == 'pull_request' && steps.triggers.outputs.triggered == 'true'
       shell: bash
       run: |
         # Apply lite mode modifications for pull requests
@@ -102,30 +103,24 @@ runs:
         echo "${TEMPLATE}" >> $GITHUB_ENV
         echo "EOF" >> $GITHUB_ENV
 
-    - uses: bcgov/action-oc-runner@v1.0.0
-      with:
-        oc_namespace: ${{ inputs.oc_namespace }}
-        oc_token: ${{ inputs.oc_token }}
-        oc_server: ${{ inputs.oc_server }}
-        oc_version: ${{ inputs.oc_version }}
-        repository: ${{ env.REPOSITORY }}
-        triggers: ${{ inputs.triggers }}
-        commands: |
-          # Expand for deployment steps
-          if [ "${{ inputs.overwrite }}" != "false" ]; then
-            echo "Overwrite=true; using oc apply"
-            oc apply --timeout=${{ inputs.timeout || '15m' }} -f - <<< "${TEMPLATE}"
-          else
-            # Allow AlreadyExists errors and expected failures
-            echo "Overwrite=false; using oc create"
-            (set +o pipefail; oc create -f - 2>&1 <<< "${TEMPLATE}" | sed 's/.*: //')
-          fi
+    - if: steps.triggers.outputs.triggered == 'true'
+      shell: bash
+      run: |
+        # Expand for deployment steps
+        if [ "${{ inputs.overwrite }}" != "false" ]; then
+          echo "Overwrite=true; using oc apply"
+          oc apply --timeout=${{ inputs.timeout || '15m' }} -f - <<< "${TEMPLATE}"
+        else
+          # Allow AlreadyExists errors and expected failures
+          echo "Overwrite=false; using oc create"
+          (set +o pipefail; oc create -f - 2>&1 <<< "${TEMPLATE}" | sed 's/.*: //')
+        fi
 
-          # Follow any active deployments
-          DEPLOYMENT=$(echo "${TEMPLATE}" | jq -r '.items[] | select(.kind=="Deployment").metadata.name //empty')
-          if [ ! -z "${DEPLOYMENT}" ]&&[ ! -z $(oc get deployment ${DEPLOYMENT} -o name --ignore-not-found) ]; then
-            oc rollout status deployment/${DEPLOYMENT} -w
-          fi
+        # Follow any active deployments
+        DEPLOYMENT=$(echo "${TEMPLATE}" | jq -r '.items[] | select(.kind=="Deployment").metadata.name //empty')
+        if [ ! -z "${DEPLOYMENT}" ]&&[ ! -z $(oc get deployment ${DEPLOYMENT} -o name --ignore-not-found) ]; then
+          oc rollout status deployment/${DEPLOYMENT} -w
+        fi
 
     # Action repo needs to be present for cleanup/tests
     - name: Checkout local repo to make sure action.yml is present

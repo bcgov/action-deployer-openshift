@@ -49,7 +49,7 @@ outputs:
 runs:
   using: composite
   steps:
-    - uses: bcgov/action-oc-runner@v1.0.0
+    - uses: bcgov/action-oc-runner@v1.1.0
       id: triggers
       with:
         oc_namespace: ${{ inputs.oc_namespace }}

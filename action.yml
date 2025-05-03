@@ -55,7 +55,7 @@ runs:
         oc_namespace: ${{ inputs.oc_namespace }}
         oc_token: ${{ inputs.oc_token }}
         oc_server: ${{ inputs.oc_server }}
-        oc_version: ${{ inputs.oc_version }}
+        ${{ inputs.oc_version && format('oc_version: {0}', inputs.oc_version) }}
         repository: ${{ inputs.repository }}
         triggers: ${{ inputs.triggers }}
         commands: |

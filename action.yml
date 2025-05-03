@@ -57,7 +57,7 @@ runs:
         oc_server: ${{ inputs.oc_server }}
         repository: ${{ inputs.repository }}
         triggers: ${{ inputs.triggers }}
-        ${{ inputs.oc_version != '' && ('oc_version: ' inputs.oc_version) || '' }}
+        ${{ inputs.oc_version != '' && format('oc_version: {0}', inputs.oc_version) || '' }}
         commands: |
           # Process template and variables
           TEMPLATE="$(oc process -f ${{ inputs.file }} ${{ inputs.parameters }} --local)"

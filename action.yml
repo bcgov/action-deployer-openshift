@@ -61,11 +61,13 @@ inputs:
     description: |
       Override default OpenShift CLI (oc) version
       Example: 4.16
+    pattern: '^4\.[0-9]+$'
   repository:
     description: |
       Specify a different repo to clone
       Example: bcgov/quickstart-openshift
     default: ${{ github.repository }}
+    pattern: '^[a-zA-Z0-9-_]+/[a-zA-Z0-9-_]+$'
 
 outputs:
   triggered:

@@ -7,39 +7,67 @@ branding:
 inputs:
   ### Required
   file:
-    description: Template file (e.g. frontend/openshift.deploy.yml)
+    description: |
+      Template file
+      Example frontend/openshift.deploy.yml
     required: true
   oc_namespace:
-    description: OpenShift namespace (e.g. abc123-dev)
+    description: |
+      OpenShift namespace
+      Example: abc123-dev, abc123-test, abc123-prod
     required: true
+    pattern: '^[a-z0-9]{6}-(dev|test|prod|tools)$'
   oc_server:
-    description: OpenShift server (e.g. https://api.silver.devops.gov.bc.ca:6443)
+    description: |
+      OpenShift server URL with port
+      Example: https://api.silver.devops.gov.bc.ca:6443
     required: true
+    pattern: '^https:\/\/.*:6443$'
   oc_token:
-    description: OpenShift access token
+    description: |
+      OpenShift access token for authentication
+      Should be stored as a GitHub secret
     required: true
+    minLength: 32
 
   ### Typical / recommended
   overwrite:
-    description: Replace existing objects/artifacts? (true|false)
-    required: true
+    description: |
+      Replace existing objects/artifacts?
+      Example: true, false
+    default: true
+    type: boolean
   parameters:
-    description: Template parameters/variables to pass (e.g. -p ZONE=...)
+    description: |
+      Template parameters/variables to pass
+      Example: -p ZONE=1234
   timeout:
-    description: Timeout for deployment. [default=15m]
+    description: |
+      Timeout for deployment
+      Example: 30s, 10m, 1h
     default: "15m"
   triggers:
-    description: Omit to always build, otherwise trigger by path; e.g. ('./backend/', './frontend/)
+    description: |
+      Omit to always build, otherwise trigger by path
+      Example: ('./backend/', './frontend/)
 
   ### Usually a bad idea / not recommended
   diff_branch:
-    description: Branch to diff against
+    description: |
+      Branch to diff against
+      Example: main
     default: ${{ github.event.repository.default_branch }}
   oc_version:
-    description: Override default OpenShift CLI (oc) version; e.g. 4.13
+    description: |
+      Override default OpenShift CLI (oc) version
+      Example: 4.16
+    pattern: '^4\.[0-9]+$'
   repository:
-    description: Optionally, specify a different repo to clone
+    description: |
+      Specify a different repo to clone
+      Example: bcgov/quickstart-openshift
     default: ${{ github.repository }}
+    pattern: '^[a-zA-Z0-9-_]+/[a-zA-Z0-9-_]+$'
 
 outputs:
   triggered:

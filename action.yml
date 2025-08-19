@@ -16,7 +16,7 @@ inputs:
       OpenShift namespace
       Example: abc123-dev, abc123-test, abc123-prod
     required: true
-    pattern: '^[a-z0-9]{6}-(dev|test|prod|tools)$'
+    pattern: "^[a-z0-9]{6}-(dev|test|prod|tools)$"
   oc_server:
     description: |
       OpenShift server URL with port
@@ -67,7 +67,7 @@ inputs:
       Specify a different repo to clone
       Example: bcgov/quickstart-openshift
     default: ${{ github.repository }}
-    pattern: '^[a-zA-Z0-9-_]+/[a-zA-Z0-9-_]+$'
+    pattern: "^[a-zA-Z0-9-_]+/[a-zA-Z0-9-_]+$"
 
 outputs:
   triggered:
@@ -172,4 +172,4 @@ runs:
     # Action repo needs to be present for cleanup/tests
     - name: Checkout local repo to make sure action.yml is present
       if: github.repository != inputs.repository
-      uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4
+      uses: actions/checkout@v4

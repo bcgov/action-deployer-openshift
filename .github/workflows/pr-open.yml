@@ -32,7 +32,7 @@ jobs:
             oc_version: 4.13
             overwrite: true
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - id: deploys
         uses: ./
         with:

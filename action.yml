@@ -56,9 +56,9 @@ inputs:
       Example: true, false
     default: ${{ github.event.pull_request != '' }}
     type: boolean
-  verbose:
+  debug:
     description: |
-      Enable verbose logging?
+      Enable debug logging?
       Example: true, false
     default: false
     type: boolean
@@ -145,7 +145,7 @@ runs:
       shell: bash
       run: |
         # Apply lite mode modifications for pull requests
-        if [ "${{ inputs.verbose }}" = "true" ]; then
+        if [ "${{ inputs.debug }}" = "true" ]; then
           echo "DEBUG: Template BEFORE lite mode modifications:"
           echo "${TEMPLATE}"
         fi
@@ -167,7 +167,7 @@ runs:
         echo "${TEMPLATE}" >> $GITHUB_ENV
         echo "EOF" >> $GITHUB_ENV
 
-        if [ "${{ inputs.verbose }}" = "true" ]; then
+        if [ "${{ inputs.debug }}" = "true" ]; then
           echo "DEBUG: Template AFTER lite mode modifications:"
           echo "${TEMPLATE}"
         fi

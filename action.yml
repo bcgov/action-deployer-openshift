@@ -145,43 +145,34 @@ runs:
           oc delete imagestream ${name} --ignore-not-found
         done
 
+        # Apply lite mode modifications for pull requests if triggered
+        if [[ "${{ inputs.lite_mode }}" == "true" ]]; then
+          if [[ "${{ inputs.debug }}" == "true" ]]; then
+            echo "DEBUG: Template BEFORE lite mode modifications:"
+            echo "${TEMPLATE}"
+          fi
+
+          echo "Applying lite mode modifications"
+          TEMPLATE=$(echo "${TEMPLATE}" | jq '
+            .items |= map(select(.kind != "HorizontalPodAutoscaler" and .kind != "PodDisruptionBudget")) |
+            .items |= map(
+              if .kind == "Deployment"
+              then .spec.replicas = 1 | .spec.strategy.type = "Recreate"
+              else .
+              end
+            )'
+          )
+
+          if [[ "${{ inputs.debug }}" == "true" ]]; then
+            echo "DEBUG: Template AFTER lite mode modifications:"
+            echo "${TEMPLATE}"
+          fi
+        fi
+
         # Store template in environment variable using heredoc format for multiline values
         echo "TEMPLATE<<EOF" >> $GITHUB_ENV
         echo "${TEMPLATE}" >> $GITHUB_ENV
         echo "EOF" >> $GITHUB_ENV
-
-        # Bug mitigation - Docker hates images with capitals in org/repo names
-        echo "REPOSITORY=$(echo "${{ inputs.repository }}" | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
-
-    - if: inputs.lite_mode && steps.triggers.outputs.triggered == 'true'
-      shell: bash
-      run: |
-        # Apply lite mode modifications for pull requests
-        if [ "${{ inputs.debug }}" = "true" ]; then
-          echo "DEBUG: Template BEFORE lite mode modifications:"
-          echo "${TEMPLATE}"
-        fi
-
-        echo "Applying lite mode modifications"
-        TEMPLATE=$(echo "${TEMPLATE}" | jq '
-          .items |= map(select(.kind != "HorizontalPodAutoscaler" and .kind != "PodDisruptionBudget")) |
-          .items |= map(
-            if .kind == "Deployment"
-            then .spec.replicas = 1 | .spec.strategy.type = "Recreate"
-            else .
-            end
-          )'
-        )
-
-        # Store template in environment variable using heredoc format for multiline values
-        echo "TEMPLATE<<EOF" >> $GITHUB_ENV
-        echo "${TEMPLATE}" >> $GITHUB_ENV
-        echo "EOF" >> $GITHUB_ENV
-
-        if [ "${{ inputs.debug }}" = "true" ]; then
-          echo "DEBUG: Template AFTER lite mode modifications:"
-          echo "${TEMPLATE}"
-        fi
 
     - if: steps.triggers.outputs.triggered == 'true'
       shell: bash

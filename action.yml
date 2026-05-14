@@ -164,8 +164,7 @@ runs:
 
         echo "Applying lite mode modifications"
         TEMPLATE=$(echo "${TEMPLATE}" | jq '
-          del(.items[] | select(.kind=="HorizontalPodAutoscaler")) |
-          del(.items[] | select(.kind=="PodDisruptionBudget")) |
+          .items |= map(select(.kind != "HorizontalPodAutoscaler" and .kind != "PodDisruptionBudget")) |
           .items |= map(
             if .kind == "Deployment"
             then .spec.replicas = 1 | .spec.strategy.type = "Recreate"

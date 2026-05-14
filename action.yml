@@ -153,15 +153,23 @@ runs:
           fi
 
           echo "Applying lite mode modifications"
-          TEMPLATE=$(echo "${TEMPLATE}" | jq '
+          echo "${TEMPLATE}" > .template.json
+          jq '
             .items |= map(select(.kind != "HorizontalPodAutoscaler" and .kind != "PodDisruptionBudget")) |
             .items |= map(
               if .kind == "Deployment"
               then .spec.replicas = 1 | .spec.strategy.type = "Recreate"
               else .
               end
-            )'
-          )
+            )' .template.json > .template_lite.json
+          
+          if [ -s .template_lite.json ]; then
+            TEMPLATE=$(cat .template_lite.json)
+          else
+            echo "::error::Failed to apply lite mode modifications (jq output was empty)"
+            exit 1
+          fi
+          rm .template.json .template_lite.json
 
           if [[ "${{ inputs.debug }}" == "true" ]]; then
             echo "DEBUG: Template AFTER lite mode modifications:"

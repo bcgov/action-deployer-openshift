@@ -56,6 +56,12 @@ inputs:
       Example: true, false
     default: ${{ github.event.pull_request != '' }}
     type: boolean
+  verbose:
+    description: |
+      Enable verbose logging?
+      Example: true, false
+    default: false
+    type: boolean
 
   ### Usually a bad idea / not recommended
   diff_branch:
@@ -135,12 +141,15 @@ runs:
         # Bug mitigation - Docker hates images with capitals in org/repo names
         echo "REPOSITORY=$(echo "${{ inputs.repository }}" | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
 
-    - if: inputs.lite_mode == 'true' && steps.triggers.outputs.triggered == 'true'
+    - if: inputs.lite_mode && steps.triggers.outputs.triggered == 'true'
       shell: bash
       run: |
         # Apply lite mode modifications for pull requests
-        echo "DEBUG: Lite Mode is ENABLED (inputs.lite_mode=${{ inputs.lite_mode }})"
-        echo "DEBUG: Event Name is ${{ github.event_name }}"
+        if [ "${{ inputs.verbose }}" = "true" ]; then
+          echo "DEBUG: Template BEFORE lite mode modifications:"
+          echo "${TEMPLATE}"
+        fi
+
         echo "Applying lite mode modifications"
         TEMPLATE=$(echo "${TEMPLATE}" | jq '
           del(.items[] | select(.kind=="HorizontalPodAutoscaler")) |
@@ -157,6 +166,11 @@ runs:
         echo "TEMPLATE<<EOF" >> $GITHUB_ENV
         echo "${TEMPLATE}" >> $GITHUB_ENV
         echo "EOF" >> $GITHUB_ENV
+
+        if [ "${{ inputs.verbose }}" = "true" ]; then
+          echo "DEBUG: Template AFTER lite mode modifications:"
+          echo "${TEMPLATE}"
+        fi
 
     - if: steps.triggers.outputs.triggered == 'true'
       shell: bash

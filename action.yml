@@ -139,6 +139,8 @@ runs:
       shell: bash
       run: |
         # Apply lite mode modifications for pull requests
+        echo "DEBUG: Lite Mode is ENABLED (inputs.lite_mode=${{ inputs.lite_mode }})"
+        echo "DEBUG: Event Name is ${{ github.event_name }}"
         echo "Applying lite mode modifications"
         TEMPLATE=$(echo "${TEMPLATE}" | jq '
           del(.items[] | select(.kind=="HorizontalPodAutoscaler")) |

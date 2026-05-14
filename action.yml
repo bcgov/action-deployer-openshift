@@ -50,6 +50,12 @@ inputs:
     description: |
       Omit to always build, otherwise trigger by path
       Example: ('./backend/', './frontend/)
+  lite_mode:
+    description: |
+      Apply 'lite mode' modifications (scaling down, removing PDBs) for pull requests?
+      Example: true, false
+    default: true
+    type: boolean
 
   ### Usually a bad idea / not recommended
   diff_branch:
@@ -129,7 +135,7 @@ runs:
         # Bug mitigation - Docker hates images with capitals in org/repo names
         echo "REPOSITORY=$(echo "${{ inputs.repository }}" | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
 
-    - if: github.event_name == 'pull_request' && steps.triggers.outputs.triggered == 'true'
+    - if: (github.event_name == 'pull_request' || github.event.pull_request) && inputs.lite_mode == 'true' && steps.triggers.outputs.triggered == 'true'
       shell: bash
       run: |
         # Apply lite mode modifications for pull requests

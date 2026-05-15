@@ -10,7 +10,8 @@ concurrency:
   group: pr-${{ github.workflow }}-${{ github.event.number }}
   cancel-in-progress: true
 
-permissions: {}
+permissions:
+  contents: read
 
 jobs:
   # Clean up OpenShift when PR closed, no conditions
@@ -24,6 +25,7 @@ jobs:
           oc_namespace: ${{ vars.oc_namespace }}
           oc_token: ${{ secrets.oc_token }}
           oc_server: ${{ vars.oc_server }}
+          token: ${{ github.token }}
           commands: |
             # Remove old build runs, build pods and deployment pods
             oc delete all,pvc,secret -l app=${{ github.event.repository.name }}-${{ github.event.number }}

@@ -64,7 +64,7 @@ inputs:
     type: boolean
 
   ### Usually a bad idea / not recommended
-  diff_branch:
+  ref:
     description: |
       Branch to diff against
       Example: main
@@ -110,7 +110,7 @@ runs:
       uses: bcgov/action-diff-triggers@9be6baaf718f92cfa66c89fe6d286207d5bba8f1 # v1.2.0
       with:
         triggers: ${{ inputs.triggers }}
-        diff_branch: ${{ inputs.diff_branch }}
+        ref: ${{ inputs.ref }}
         token: ${{ inputs.token }}
 
     - if: inputs.oc_version != '' && steps.triggers.outputs.triggered == 'true'

@@ -57,7 +57,7 @@ Testing has only been done with public images (ghcr.io, hub.docker.com) so far.
 
     # Overrides the default branch to diff against
     # Defaults to the default branch, usually `main`
-    diff_branch: ${{ github.event.repository.default_branch }}
+    ref: ${{ github.event.repository.default_branch }}
 
     # Override default OpenShift CLI (oc) version; e.g. 4.13
     oc_version: "4.13"

@@ -103,13 +103,13 @@ runs:
 
     # Send triggers to diff action
     - id: triggers
-      uses: bcgov/action-diff-triggers@4abfcb211f5816d654d1c5a417e5431a2c4a5379 # v1.1.1
+      uses: bcgov/action-diff-triggers@9be6baaf718f92cfa66c89fe6d286207d5bba8f1 # v1.2.0
       with:
         triggers: ${{ inputs.triggers }}
         diff_branch: ${{ inputs.diff_branch }}
 
     - if: inputs.oc_version != '' && steps.triggers.outputs.triggered == 'true'
-      uses: bcgov/action-oc-runner@d2fc921aaa9d70684c186dbb7754e6985d44d86f # v1.4.1
+      uses: bcgov/action-oc-runner@1815ce17a815c71e9078851a2e3da84d191ea6c3 # v1.5.0
       with:
         oc_namespace: ${{ inputs.oc_namespace }}
         oc_token: ${{ inputs.oc_token }}
@@ -119,7 +119,7 @@ runs:
         triggers: ${{ inputs.triggers }}
 
     - if: inputs.oc_version == '' && steps.triggers.outputs.triggered == 'true'
-      uses: bcgov/action-oc-runner@d2fc921aaa9d70684c186dbb7754e6985d44d86f # v1.4.1
+      uses: bcgov/action-oc-runner@1815ce17a815c71e9078851a2e3da84d191ea6c3 # v1.5.0
       with:
         oc_namespace: ${{ inputs.oc_namespace }}
         oc_token: ${{ inputs.oc_token }}

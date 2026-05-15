@@ -10,6 +10,9 @@ parameters:
   - name: ZONE
     description: Deployment zone, e.g. pr-### or prod
     required: true
+  - name: PG_VERSION
+    description: PostgreSQL version tag for the Docker Hub postgres image
+    value: "17"
   - name: PVC_MOUNT_PATH
     description: Where to mount the PVC, subpath (e.g. data/)
     value: /var/lib/postgresql
@@ -68,7 +71,7 @@ objects:
   - kind: PersistentVolumeClaim
     apiVersion: v1
     metadata:
-      name: "${NAME}-${ZONE}-${COMPONENT}"
+      name: "${NAME}-${ZONE}-${COMPONENT}-${PG_VERSION}"
       labels:
         app: ${NAME}-${ZONE}
         component: ${COMPONENT}
@@ -107,10 +110,10 @@ objects:
           volumes:
             - name: "${NAME}-${ZONE}-${COMPONENT}"
               persistentVolumeClaim:
-                claimName: "${NAME}-${ZONE}-${COMPONENT}"
+                claimName: "${NAME}-${ZONE}-${COMPONENT}-${PG_VERSION}"
           containers:
             - name: "${NAME}"
-              image: ghcr.io/bcgov/nr-containers/postgres:12.19
+              image: postgres:${PG_VERSION}
               ports:
                 - containerPort: 5432
                   protocol: TCP

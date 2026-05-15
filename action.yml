@@ -80,6 +80,11 @@ inputs:
       Example: bcgov/quickstart-openshift
     default: ${{ github.repository }}
     pattern: "^[a-zA-Z0-9-_]+/[a-zA-Z0-9-_]+$"
+  token:
+    description: |
+      GitHub token to use for private repositories
+      Default: ${{ github.token }}
+    default: ${{ github.token }}
 
 outputs:
   triggered:
@@ -107,6 +112,7 @@ runs:
       with:
         triggers: ${{ inputs.triggers }}
         diff_branch: ${{ inputs.diff_branch }}
+        token: ${{ inputs.token }}
 
     - if: inputs.oc_version != '' && steps.triggers.outputs.triggered == 'true'
       uses: bcgov/action-oc-runner@1815ce17a815c71e9078851a2e3da84d191ea6c3 # v1.5.0
@@ -117,6 +123,7 @@ runs:
         oc_version: ${{ inputs.oc_version }}
         repository: ${{ inputs.repository }}
         triggers: ${{ inputs.triggers }}
+        token: ${{ inputs.token }}
 
     - if: inputs.oc_version == '' && steps.triggers.outputs.triggered == 'true'
       uses: bcgov/action-oc-runner@1815ce17a815c71e9078851a2e3da84d191ea6c3 # v1.5.0
@@ -126,6 +133,7 @@ runs:
         oc_server: ${{ inputs.oc_server }}
         repository: ${{ inputs.repository }}
         triggers: ${{ inputs.triggers }}
+        token: ${{ inputs.token }}
 
     - if: steps.triggers.outputs.triggered == 'true'
       shell: bash
@@ -205,3 +213,5 @@ runs:
     - name: Checkout local repo to make sure action.yml is present
       if: github.repository != inputs.repository
       uses: actions/checkout@v6
+      with:
+        token: ${{ inputs.token }}

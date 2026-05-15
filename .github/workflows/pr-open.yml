@@ -42,6 +42,7 @@ jobs:
           oc_token: ${{ secrets.OC_TOKEN }}
           oc_version: ${{ matrix.oc_version }}
           overwrite: ${{ matrix.overwrite }}
+          debug: true
           parameters: -p ZONE=${{ github.event.number }} ${{ matrix.parameters }}
       - id: trigger
         run: echo "${{ matrix.name }}=${{ steps.deploys.outputs.triggered }}" >> $GITHUB_OUTPUT

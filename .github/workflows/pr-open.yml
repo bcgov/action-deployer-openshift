@@ -18,6 +18,7 @@ jobs:
       database: ${{ steps.trigger.outputs.database }}
       frontend: ${{ steps.trigger.outputs.frontend }}
     strategy:
+      fail-fast: false
       matrix:
         name: [ backend, database, frontend ]
         include:

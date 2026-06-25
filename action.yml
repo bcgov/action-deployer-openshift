@@ -228,6 +228,6 @@ runs:
     # Action repo needs to be present for cleanup/tests
     - name: Checkout local repo to make sure action.yml is present
       if: github.repository != inputs.repository
-      uses: actions/checkout@v6
+      uses: actions/checkout@v7
       with:
         token: ${{ inputs.github_token }}

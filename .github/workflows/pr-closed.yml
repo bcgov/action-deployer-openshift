@@ -20,7 +20,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
-      - uses: bcgov/action-oc-runner@09b5eeae15bdbc7f7a21b406ee2c66a1d5819f8c # v1.6.0
+      - uses: bcgov/action-oc-runner@a35e7166c7976f651ec2b4ae41c983332ceaa406 # v1.7.0
         with:
           oc_namespace: ${{ vars.oc_namespace }}
           oc_token: ${{ secrets.oc_token }}

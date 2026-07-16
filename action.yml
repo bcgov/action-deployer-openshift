@@ -178,11 +178,12 @@ runs:
 
           echo "Applying lite mode modifications"
           echo "${TEMPLATE}" > .template.json
+          # Replace strategy entirely: Recreate forbids a leftover rollingUpdate block.
           jq '
             .items |= map(select(.kind != "HorizontalPodAutoscaler" and .kind != "PodDisruptionBudget")) |
             .items |= map(
               if .kind == "Deployment"
-              then .spec.replicas = 1 | .spec.strategy.type = "Recreate"
+              then .spec.replicas = 1 | .spec.strategy = {"type": "Recreate"}
               else .
               end
             )' .template.json > .template_lite.json

@@ -56,6 +56,16 @@ inputs:
       Example: true, false
     default: ${{ github.event.pull_request != '' }}
     type: boolean
+  force_rollout:
+    description: |
+      Stamp Deployments with a per-deploy timestamp annotation, forcing a rollout
+      even when the processed template is unchanged? Without this, re-deploys that
+      reuse an image tag (e.g. a PR number) leave pods running the previous image,
+      since an unchanged pod spec never triggers a new ReplicaSet or image pull.
+      Defaults to true for pull requests.
+      Example: true, false
+    default: ${{ github.event.pull_request != '' }}
+    type: boolean
   debug:
     description: |
       Enable debug logging?
@@ -200,6 +210,19 @@ runs:
             echo "DEBUG: Template AFTER lite mode modifications:"
             echo "${TEMPLATE}"
           fi
+        fi
+
+        # Stamp Deployments so re-deploys roll out even when the spec is
+        # otherwise unchanged, e.g. when an image tag like a PR number is reused
+        if [[ "${{ inputs.force_rollout }}" == "true" ]]; then
+          echo "Stamping Deployments with a rollout timestamp"
+          TEMPLATE=$(echo "${TEMPLATE}" | jq --arg ts "$(date -u +%Y-%m-%dT%H:%M:%SZ)" '
+            .items |= map(
+              if .kind == "Deployment"
+              then .spec.template.metadata.annotations["kubectl.kubernetes.io/restartedAt"] = $ts
+              else .
+              end
+            )')
         fi
 
         # Store template in environment variable using heredoc format for multiline values

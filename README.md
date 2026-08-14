@@ -52,6 +52,13 @@ Testing has only been done with public images (ghcr.io, hub.docker.com) so far.
     # Optional, defaults to nothing, which forces a build
     triggers: ('frontend/')
 
+    # Stamp Deployments with a per-deploy timestamp annotation, forcing a
+    # rollout even when the processed template is unchanged. Without this,
+    # re-deploys that reuse an image tag (e.g. a PR number) leave pods on the
+    # previous image. Defaults to true for pull requests; set false for
+    # Deployments that should not restart on every deploy (e.g. databases).
+    force_rollout: "true"
+
 
     ### Usually a bad idea / not recommended
 

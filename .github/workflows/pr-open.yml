@@ -11,6 +11,15 @@ permissions:
   contents: read
 
 jobs:
+  tests:
+    name: Unit Tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - name: Parameter parsing and secret masking
+        run: ./tests/parse-parameters.test.sh
+
   deploys:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
@@ -52,7 +61,7 @@ jobs:
   results:
     name: Results
     runs-on: ubuntu-24.04
-    needs: [deploys]
+    needs: [deploys, tests]
     steps:
       - run: |
           # Validate outputs

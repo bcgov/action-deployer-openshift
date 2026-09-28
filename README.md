@@ -202,6 +202,62 @@ Deployment modifications:
 - Replicas limited to 1 (deployment.spec.replicas)
 - Rollout strategy limited to `Recreate` (deployment.spec.strategy.type)
 
+# Passing Secrets as Parameters
+
+Secrets can be passed through `parameters` like any other value:
+
+```yaml
+- uses: bcgov/action-deployer-openshift@X.Y.Z
+  with:
+    file: backend/openshift.deploy.yml
+    oc_namespace: ${{ vars.OC_NAMESPACE }}
+    oc_server: ${{ vars.OC_SERVER }}
+    oc_token: ${{ secrets.OC_TOKEN }}
+    parameters:
+      -p ZONE=${{ github.event.number }}
+      -p KEYSTORE_PASSWORD=${{ secrets.KEYSTORE_PASSWORD }}
+```
+
+Values are handed to `oc process` exactly as written; the input is never
+evaluated by a shell.  `$`, `` ` ``, `$()` and `!` are safe bare, so a password
+like `Pa$$w0rd` needs no escaping.
+
+Arguments are still split on whitespace, with shell-style quoting.  Wrap the
+value in single quotes if it contains a space, a double quote or a backslash:
+
+```yaml
+parameters: -p KEYSTORE_PASSWORD='${{ secrets.KEYSTORE_PASSWORD }}'
+```
+
+A value containing a single quote cannot be split unambiguously.  The action
+fails with an error rather than guessing; pass those through a file instead,
+which `oc process` reads as `KEY=VALUE` lines:
+
+```yaml
+- run: echo "KEYSTORE_PASSWORD=${{ secrets.KEYSTORE_PASSWORD }}" > "${RUNNER_TEMP}/params.env"
+- uses: bcgov/action-deployer-openshift@X.Y.Z
+  with:
+    # ...
+    parameters: -p ZONE=${{ github.event.number }} --param-file=${{ runner.temp }}/params.env
+```
+
+Values whose parameter name looks sensitive are additionally registered with the
+runner's log masker, so they are redacted even when they did not come from
+`secrets.*`.  Matching is on the name and is case insensitive:
+
+- contains `PASS`, `PASSWD`, `PASSWORD`, `PASSPHRASE`, `PWD`, `SECRET`, `TOKEN`,
+  `CREDENTIAL`, `PRIVATE`, `SALT`, `AUTH`, `CERT` or `SIGNING`
+- or has `KEY`, `KEYS`, `KEYSTORE`, `TRUSTSTORE` or `APIKEY` as a whole
+  underscore-separated word, e.g. `TLS_KEY` or `KEYSTORE_PASSWORD`
+
+Two things to know:
+
+- **Shell variables are not expanded.**  `-p TAG=$GITHUB_SHA` passes the literal
+  string `$GITHUB_SHA`.  Use the Actions context instead: `-p TAG=${{ github.sha }}`.
+- **`debug: true` never prints rendered templates.**  Rendered objects contain
+  every parameter value.  Debug output lists object kinds, names, replica counts
+  and rollout strategies only.
+
 # Output
 
 The action will return a boolean (true|false) of whether a deployment has been triggered.  It can be useful for follow-up tasks, like running tests.

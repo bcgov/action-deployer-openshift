@@ -102,13 +102,19 @@ runs:
     - name: Context Diagnostics
       if: inputs.debug
       shell: bash
+      env:
+        EVENT_NAME: ${{ github.event_name }}
+        IS_PULL_REQUEST: ${{ github.event.pull_request != '' }}
+        BASE_REF: ${{ github.base_ref }}
+        LITE_MODE: ${{ inputs.lite_mode }}
+        DEBUG: ${{ inputs.debug }}
       run: |
         echo "---- CONTEXT DIAGNOSTICS ----"
-        echo "Event Name:   ${{ github.event_name }}"
-        echo "Pull Request: ${{ github.event.pull_request != '' }}"
-        echo "Base Ref:     ${{ github.base_ref }}"
-        echo "Lite Mode:    ${{ inputs.lite_mode }}"
-        echo "Debug Mode:   ${{ inputs.debug }}"
+        echo "Event Name:   ${EVENT_NAME}"
+        echo "Pull Request: ${IS_PULL_REQUEST}"
+        echo "Base Ref:     ${BASE_REF}"
+        echo "Lite Mode:    ${LITE_MODE}"
+        echo "Debug Mode:   ${DEBUG}"
         echo "---------------------------"
 
     # Send triggers to diff action
@@ -122,8 +128,10 @@ runs:
     - name: Validate oc login retry inputs
       if: steps.triggers.outputs.triggered == 'true'
       shell: bash
+      env:
+        OC_LOGIN_ATTEMPTS: ${{ inputs.oc_login_attempts }}
       run: |
-        if ! [[ "${{ inputs.oc_login_attempts }}" =~ ^[1-9][0-9]*$ ]]; then
+        if ! [[ "${OC_LOGIN_ATTEMPTS}" =~ ^[1-9][0-9]*$ ]]; then
           echo "::error::oc_login_attempts must be a positive integer"
           exit 1
         fi
@@ -151,33 +159,72 @@ runs:
         github_token: ${{ inputs.github_token }}
         login_attempts: ${{ inputs.oc_login_attempts }}
 
-    - if: steps.triggers.outputs.triggered == 'true'
+    - name: Process template
+      if: steps.triggers.outputs.triggered == 'true'
       shell: bash
+      # Inputs travel through the environment, never through `${{ }}` inside the
+      # script body.  Actions substitutes `${{ }}` into the script text before
+      # bash parses it, so any $, ` or $() in a value is expanded or executed.
+      # A secret mangled that way no longer matches what GitHub registered for
+      # masking, so the runner cannot redact it.  See the README, "Passing
+      # secrets as parameters".
+      env:
+        ACTION_PATH: ${{ github.action_path }}
+        TEMPLATE_FILE: ${{ inputs.file }}
+        PARAMETERS: ${{ inputs.parameters }}
+        LITE_MODE: ${{ inputs.lite_mode }}
+        DEBUG: ${{ inputs.debug }}
       run: |
+        WORK_DIR="${RUNNER_TEMP:-${TMPDIR:-/tmp}}"
+        TEMPLATE="${WORK_DIR}/oc-template.json"
+        umask 077
+
+        # Split `parameters` into argv and mask sensitive values
+        PARAM_ARGS=()
+        "${ACTION_PATH}/scripts/parse-parameters.sh" "${WORK_DIR}/oc-params.nul"
+        while IFS= read -r -d '' arg; do
+          PARAM_ARGS+=("${arg}")
+        done < "${WORK_DIR}/oc-params.nul"
+        rm -f "${WORK_DIR}/oc-params.nul"
+
+        # Print object kinds and names only; rendered objects carry parameter
+        # values, so the full template must never be echoed.
+        template_summary() {
+          jq -r '[.items[] | {
+            kind: .kind,
+            name: .metadata.name,
+            replicas: (.spec.replicas // null),
+            strategy: (.spec.strategy.type // null)
+          }]' "${TEMPLATE}"
+        }
+
         # Process template and variables
-        TEMPLATE="$(oc process -f ${{ inputs.file }} ${{ inputs.parameters }} --local)"
+        if [ "${#PARAM_ARGS[@]}" -gt 0 ]; then
+          oc process --local -f "${TEMPLATE_FILE}" "${PARAM_ARGS[@]}" > "${TEMPLATE}"
+        else
+          oc process --local -f "${TEMPLATE_FILE}" > "${TEMPLATE}"
+        fi
 
         # Check for deprecated DeploymentConfig objects
-        DC_COUNT=$(echo "${TEMPLATE}" | jq '[.items[] | select(.kind=="DeploymentConfig")] | length')
+        DC_COUNT=$(jq '[.items[] | select(.kind=="DeploymentConfig")] | length' "${TEMPLATE}")
         if [ "${DC_COUNT}" -gt 0 ]; then
           echo "Error: DeploymentConfig objects are deprecated and no longer supported. Please use Deployment objects instead."
           exit 1
         fi
 
         # Clean any previous ImageStreams
-        for name in $(echo "${TEMPLATE}" | jq -r '.items[] | select(.kind=="ImageStream").metadata.name'); do
-          oc delete imagestream ${name} --ignore-not-found
+        for name in $(jq -r '.items[] | select(.kind=="ImageStream").metadata.name' "${TEMPLATE}"); do
+          oc delete imagestream "${name}" --ignore-not-found
         done
 
         # Apply lite mode modifications for pull requests if triggered
-        if [[ "${{ inputs.lite_mode }}" == "true" ]]; then
-          if [[ "${{ inputs.debug }}" == "true" ]]; then
-            echo "DEBUG: Template BEFORE lite mode modifications:"
-            echo "${TEMPLATE}"
+        if [ "${LITE_MODE}" = "true" ]; then
+          if [ "${DEBUG}" = "true" ]; then
+            echo "DEBUG: Template objects BEFORE lite mode modifications:"
+            template_summary
           fi
 
           echo "Applying lite mode modifications"
-          echo "${TEMPLATE}" > .template.json
           # Replace strategy entirely: Recreate forbids a leftover rollingUpdate block.
           jq '
             .items |= map(select(.kind != "HorizontalPodAutoscaler" and .kind != "PodDisruptionBudget")) |
@@ -186,44 +233,48 @@ runs:
               then .spec.replicas = 1 | .spec.strategy = {"type": "Recreate"}
               else .
               end
-            )' .template.json > .template_lite.json
-          
-          if [ -s .template_lite.json ]; then
-            TEMPLATE=$(cat .template_lite.json)
+            )' "${TEMPLATE}" > "${WORK_DIR}/oc-template-lite.json"
+
+          if [ -s "${WORK_DIR}/oc-template-lite.json" ]; then
+            mv "${WORK_DIR}/oc-template-lite.json" "${TEMPLATE}"
           else
+            rm -f "${WORK_DIR}/oc-template-lite.json"
             echo "::error::Failed to apply lite mode modifications (jq output was empty)"
             exit 1
           fi
-          rm .template.json .template_lite.json
 
-          if [[ "${{ inputs.debug }}" == "true" ]]; then
-            echo "DEBUG: Template AFTER lite mode modifications:"
-            echo "${TEMPLATE}"
+          if [ "${DEBUG}" = "true" ]; then
+            echo "DEBUG: Template objects AFTER lite mode modifications:"
+            template_summary
           fi
         fi
 
-        # Store template in environment variable using heredoc format for multiline values
-        echo "TEMPLATE<<EOF" >> $GITHUB_ENV
-        echo "${TEMPLATE}" >> $GITHUB_ENV
-        echo "EOF" >> $GITHUB_ENV
+        # Hand the rendered template to the next step as a path.  The objects
+        # contain every parameter value, so they must not go into GITHUB_ENV,
+        # which would expose them to every later step in the job -- and whose
+        # heredoc framing can be broken by template content.
+        echo "TEMPLATE_PATH=${TEMPLATE}" >> "${GITHUB_ENV}"
 
-    - if: steps.triggers.outputs.triggered == 'true'
+    - name: Deploy
+      if: steps.triggers.outputs.triggered == 'true'
       shell: bash
+      env:
+        OVERWRITE: ${{ inputs.overwrite }}
+        TIMEOUT: ${{ inputs.timeout }}
       run: |
-        # Expand for deployment steps
-        if [ "${{ inputs.overwrite }}" != "false" ]; then
+        if [ "${OVERWRITE}" != "false" ]; then
           echo "Overwrite=true; using oc apply"
-          oc apply --timeout=${{ inputs.timeout || '15m' }} -f - <<< "${TEMPLATE}"
+          oc apply --timeout="${TIMEOUT:-15m}" -f "${TEMPLATE_PATH}"
         else
           # Allow AlreadyExists errors and expected failures
           echo "Overwrite=false; using oc create"
-          (set +o pipefail; oc create -f - 2>&1 <<< "${TEMPLATE}" | sed 's/.*: //')
+          (set +o pipefail; oc create -f "${TEMPLATE_PATH}" 2>&1 | sed 's/.*: //')
         fi
 
         # Follow any active deployments
-        DEPLOYMENT=$(echo "${TEMPLATE}" | jq -r '.items[] | select(.kind=="Deployment").metadata.name //empty')
-        if [ ! -z "${DEPLOYMENT}" ]&&[ ! -z $(oc get deployment ${DEPLOYMENT} -o name --ignore-not-found) ]; then
-          oc rollout status deployment/${DEPLOYMENT} -w
+        DEPLOYMENT=$(jq -r '.items[] | select(.kind=="Deployment").metadata.name //empty' "${TEMPLATE_PATH}")
+        if [ -n "${DEPLOYMENT}" ] && [ -n "$(oc get deployment "${DEPLOYMENT}" -o name --ignore-not-found)" ]; then
+          oc rollout status "deployment/${DEPLOYMENT}" -w
         fi
 
     # Action repo needs to be present for cleanup/tests

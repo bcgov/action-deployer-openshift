@@ -158,8 +158,8 @@ runs:
         # Process template and variables
         # Rendered templates hold secrets that log masking can miss (JSON escapes & < > etc.),
         # so they only ever go to a private file; never to logs, GITHUB_ENV or outputs
+        umask 077
         TEMPLATE_FILE="$(mktemp "${RUNNER_TEMP}/deployer-template.XXXXXX")"
-        chmod 600 "${TEMPLATE_FILE}"
         echo "template_file=${TEMPLATE_FILE}" >> "${GITHUB_OUTPUT}"
         oc process -f ${{ inputs.file }} ${{ inputs.parameters }} --local > "${TEMPLATE_FILE}"
 
@@ -179,6 +179,7 @@ runs:
         if [[ "${{ inputs.lite_mode }}" == "true" ]]; then
           echo "Applying lite mode modifications"
           LITE_FILE="$(mktemp "${RUNNER_TEMP}/deployer-template-lite.XXXXXX")"
+          trap 'rm -f "${LITE_FILE}"' EXIT
           # Replace strategy entirely: Recreate forbids a leftover rollingUpdate block.
           jq '
             .items |= map(select(.kind != "HorizontalPodAutoscaler" and .kind != "PodDisruptionBudget")) |
@@ -192,7 +193,6 @@ runs:
           if [ -s "${LITE_FILE}" ]; then
             mv "${LITE_FILE}" "${TEMPLATE_FILE}"
           else
-            rm -f "${LITE_FILE}"
             echo "::error::Failed to apply lite mode modifications (jq output was empty)"
             exit 1
           fi
@@ -225,8 +225,9 @@ runs:
           oc rollout status deployment/${DEPLOYMENT} -w
         fi
 
+    # Always runs (success, failure, cancellation); rm -f never fails
     - name: Remove rendered template
-      if: always() && steps.process.outputs.template_file != ''
+      if: always()
       shell: bash
       env:
         TEMPLATE_FILE: ${{ steps.process.outputs.template_file }}

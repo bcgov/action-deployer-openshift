@@ -152,32 +152,33 @@ runs:
         login_attempts: ${{ inputs.oc_login_attempts }}
 
     - if: steps.triggers.outputs.triggered == 'true'
+      id: process
       shell: bash
       run: |
         # Process template and variables
-        TEMPLATE="$(oc process -f ${{ inputs.file }} ${{ inputs.parameters }} --local)"
+        # Rendered templates hold secrets that log masking can miss (JSON escapes & < > etc.),
+        # so they only ever go to a private file; never to logs, GITHUB_ENV or outputs
+        TEMPLATE_FILE="$(mktemp "${RUNNER_TEMP}/deployer-template.XXXXXX")"
+        chmod 600 "${TEMPLATE_FILE}"
+        echo "template_file=${TEMPLATE_FILE}" >> "${GITHUB_OUTPUT}"
+        oc process -f ${{ inputs.file }} ${{ inputs.parameters }} --local > "${TEMPLATE_FILE}"
 
         # Check for deprecated DeploymentConfig objects
-        DC_COUNT=$(echo "${TEMPLATE}" | jq '[.items[] | select(.kind=="DeploymentConfig")] | length')
+        DC_COUNT=$(jq '[.items[] | select(.kind=="DeploymentConfig")] | length' "${TEMPLATE_FILE}")
         if [ "${DC_COUNT}" -gt 0 ]; then
           echo "Error: DeploymentConfig objects are deprecated and no longer supported. Please use Deployment objects instead."
           exit 1
         fi
 
         # Clean any previous ImageStreams
-        for name in $(echo "${TEMPLATE}" | jq -r '.items[] | select(.kind=="ImageStream").metadata.name'); do
+        for name in $(jq -r '.items[] | select(.kind=="ImageStream").metadata.name' "${TEMPLATE_FILE}"); do
           oc delete imagestream ${name} --ignore-not-found
         done
 
         # Apply lite mode modifications for pull requests if triggered
         if [[ "${{ inputs.lite_mode }}" == "true" ]]; then
-          if [[ "${{ inputs.debug }}" == "true" ]]; then
-            echo "DEBUG: Template BEFORE lite mode modifications:"
-            echo "${TEMPLATE}"
-          fi
-
           echo "Applying lite mode modifications"
-          echo "${TEMPLATE}" > .template.json
+          LITE_FILE="$(mktemp "${RUNNER_TEMP}/deployer-template-lite.XXXXXX")"
           # Replace strategy entirely: Recreate forbids a leftover rollingUpdate block.
           jq '
             .items |= map(select(.kind != "HorizontalPodAutoscaler" and .kind != "PodDisruptionBudget")) |
@@ -186,45 +187,50 @@ runs:
               then .spec.replicas = 1 | .spec.strategy = {"type": "Recreate"}
               else .
               end
-            )' .template.json > .template_lite.json
-          
-          if [ -s .template_lite.json ]; then
-            TEMPLATE=$(cat .template_lite.json)
+            )' "${TEMPLATE_FILE}" > "${LITE_FILE}"
+
+          if [ -s "${LITE_FILE}" ]; then
+            mv "${LITE_FILE}" "${TEMPLATE_FILE}"
           else
+            rm -f "${LITE_FILE}"
             echo "::error::Failed to apply lite mode modifications (jq output was empty)"
             exit 1
           fi
-          rm .template.json .template_lite.json
-
-          if [[ "${{ inputs.debug }}" == "true" ]]; then
-            echo "DEBUG: Template AFTER lite mode modifications:"
-            echo "${TEMPLATE}"
-          fi
         fi
 
-        # Store template in environment variable using heredoc format for multiline values
-        echo "TEMPLATE<<EOF" >> $GITHUB_ENV
-        echo "${TEMPLATE}" >> $GITHUB_ENV
-        echo "EOF" >> $GITHUB_ENV
+        # Debug: object kinds/names only, never contents
+        if [[ "${{ inputs.debug }}" == "true" ]]; then
+          echo "DEBUG: Objects to deploy:"
+          jq -r '.items[] | "\(.kind)/\(.metadata.name)"' "${TEMPLATE_FILE}"
+        fi
 
     - if: steps.triggers.outputs.triggered == 'true'
       shell: bash
+      env:
+        TEMPLATE_FILE: ${{ steps.process.outputs.template_file }}
       run: |
         # Expand for deployment steps
         if [ "${{ inputs.overwrite }}" != "false" ]; then
           echo "Overwrite=true; using oc apply"
-          oc apply --timeout=${{ inputs.timeout || '15m' }} -f - <<< "${TEMPLATE}"
+          oc apply --timeout=${{ inputs.timeout || '15m' }} -f "${TEMPLATE_FILE}"
         else
           # Allow AlreadyExists errors and expected failures
           echo "Overwrite=false; using oc create"
-          (set +o pipefail; oc create -f - 2>&1 <<< "${TEMPLATE}" | sed 's/.*: //')
+          (set +o pipefail; oc create -f "${TEMPLATE_FILE}" 2>&1 | sed 's/.*: //')
         fi
 
         # Follow any active deployments
-        DEPLOYMENT=$(echo "${TEMPLATE}" | jq -r '.items[] | select(.kind=="Deployment").metadata.name //empty')
+        DEPLOYMENT=$(jq -r '.items[] | select(.kind=="Deployment").metadata.name //empty' "${TEMPLATE_FILE}")
         if [ ! -z "${DEPLOYMENT}" ]&&[ ! -z $(oc get deployment ${DEPLOYMENT} -o name --ignore-not-found) ]; then
           oc rollout status deployment/${DEPLOYMENT} -w
         fi
+
+    - name: Remove rendered template
+      if: always() && steps.process.outputs.template_file != ''
+      shell: bash
+      env:
+        TEMPLATE_FILE: ${{ steps.process.outputs.template_file }}
+      run: rm -f "${TEMPLATE_FILE}"
 
     # Action repo needs to be present for cleanup/tests
     - name: Checkout local repo to make sure action.yml is present

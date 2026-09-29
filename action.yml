@@ -102,13 +102,19 @@ runs:
     - name: Context Diagnostics
       if: inputs.debug
       shell: bash
+      env:
+        DIAG_EVENT_NAME: ${{ github.event_name }}
+        DIAG_PULL_REQUEST: ${{ github.event.pull_request != '' }}
+        DIAG_BASE_REF: ${{ github.base_ref }}
+        DIAG_LITE_MODE: ${{ inputs.lite_mode }}
+        DIAG_DEBUG_MODE: ${{ inputs.debug }}
       run: |
         echo "---- CONTEXT DIAGNOSTICS ----"
-        echo "Event Name:   ${{ github.event_name }}"
-        echo "Pull Request: ${{ github.event.pull_request != '' }}"
-        echo "Base Ref:     ${{ github.base_ref }}"
-        echo "Lite Mode:    ${{ inputs.lite_mode }}"
-        echo "Debug Mode:   ${{ inputs.debug }}"
+        echo "Event Name:   ${DIAG_EVENT_NAME}"
+        echo "Pull Request: ${DIAG_PULL_REQUEST}"
+        echo "Base Ref:     ${DIAG_BASE_REF}"
+        echo "Lite Mode:    ${DIAG_LITE_MODE}"
+        echo "Debug Mode:   ${DIAG_DEBUG_MODE}"
         echo "---------------------------"
 
     # Send triggers to diff action
@@ -122,8 +128,10 @@ runs:
     - name: Validate oc login retry inputs
       if: steps.triggers.outputs.triggered == 'true'
       shell: bash
+      env:
+        OC_LOGIN_ATTEMPTS: ${{ inputs.oc_login_attempts }}
       run: |
-        if ! [[ "${{ inputs.oc_login_attempts }}" =~ ^[1-9][0-9]*$ ]]; then
+        if ! [[ "${OC_LOGIN_ATTEMPTS}" =~ ^[1-9][0-9]*$ ]]; then
           echo "::error::oc_login_attempts must be a positive integer"
           exit 1
         fi
@@ -154,6 +162,11 @@ runs:
     - if: steps.triggers.outputs.triggered == 'true'
       id: process
       shell: bash
+      env:
+        FILE: ${{ inputs.file }}
+        PARAMETERS: ${{ inputs.parameters }}
+        LITE_MODE: ${{ inputs.lite_mode }}
+        DEBUG: ${{ inputs.debug }}
       run: |
         # Process template and variables
         # Rendered templates hold secrets that log masking can miss (JSON escapes & < > etc.),
@@ -161,7 +174,10 @@ runs:
         umask 077
         TEMPLATE_FILE="$(mktemp "${RUNNER_TEMP}/deployer-template.XXXXXX")"
         echo "template_file=${TEMPLATE_FILE}" >> "${GITHUB_OUTPUT}"
-        oc process -f ${{ inputs.file }} ${{ inputs.parameters }} --local > "${TEMPLATE_FILE}"
+        # parameters is shell-parsed on purpose, as before: callers rely on quoting and on
+        # expanding their own env vars (e.g. -p HOST="$HOST"), so eval it into an array
+        eval "PARAMS=(${PARAMETERS})"
+        oc process -f "${FILE}" "${PARAMS[@]}" --local > "${TEMPLATE_FILE}"
 
         # Check for deprecated DeploymentConfig objects
         DC_COUNT=$(jq '[.items[] | select(.kind=="DeploymentConfig")] | length' "${TEMPLATE_FILE}")
@@ -176,7 +192,7 @@ runs:
         done
 
         # Apply lite mode modifications for pull requests if triggered
-        if [[ "${{ inputs.lite_mode }}" == "true" ]]; then
+        if [[ "${LITE_MODE}" == "true" ]]; then
           echo "Applying lite mode modifications"
           LITE_FILE="$(mktemp "${RUNNER_TEMP}/deployer-template-lite.XXXXXX")"
           trap 'rm -f "${LITE_FILE}"' EXIT
@@ -199,7 +215,7 @@ runs:
         fi
 
         # Debug: object kinds/names only, never contents
-        if [[ "${{ inputs.debug }}" == "true" ]]; then
+        if [[ "${DEBUG}" == "true" ]]; then
           echo "DEBUG: Objects to deploy:"
           jq -r '.items[] | "\(.kind)/\(.metadata.name)"' "${TEMPLATE_FILE}"
         fi
@@ -208,11 +224,13 @@ runs:
       shell: bash
       env:
         TEMPLATE_FILE: ${{ steps.process.outputs.template_file }}
+        OVERWRITE: ${{ inputs.overwrite }}
+        TIMEOUT: ${{ inputs.timeout || '15m' }}
       run: |
         # Expand for deployment steps
-        if [ "${{ inputs.overwrite }}" != "false" ]; then
+        if [ "${OVERWRITE}" != "false" ]; then
           echo "Overwrite=true; using oc apply"
-          oc apply --timeout=${{ inputs.timeout || '15m' }} -f "${TEMPLATE_FILE}"
+          oc apply --timeout="${TIMEOUT}" -f "${TEMPLATE_FILE}"
         else
           # Allow AlreadyExists errors and expected failures
           echo "Overwrite=false; using oc create"

@@ -10,6 +10,20 @@
 
 # OpenShift Deployer
 
+> [!IMPORTANT]
+> **This action has moved to [`bcgov/actions-openshift/deployer`](https://github.com/bcgov/actions-openshift/tree/main/deployer).** This repository is retiring and will be archived. Update workflows to the new path, pinned to a [release](https://github.com/bcgov/actions-openshift/releases) (not `@main`):
+>
+> ```yaml
+> - uses: bcgov/actions-openshift/deployer@vX.Y.Z
+>   with:
+>     file: frontend/openshift.deploy.yml
+>     oc_namespace: ${{ secrets.OC_NAMESPACE }}
+>     oc_server: ${{ vars.OC_SERVER }}
+>     oc_token: ${{ secrets.OC_TOKEN }}
+> ```
+>
+> Inputs are unchanged.
+
 Deploy to OpenShift using templates.  This action is a wrapper around the OpenShift CLI (oc) and is intended to be used with OpenShift 4.x.
 
 Testing has only been done with public images (ghcr.io, hub.docker.com) so far.

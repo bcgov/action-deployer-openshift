@@ -99,6 +99,11 @@ outputs:
 runs:
   using: composite
   steps:
+    - name: Action moved
+      shell: bash
+      run: |
+        echo "::warning title=Action moved::This Action has moved to bcgov/actions-openshift/deployer. Update workflows to bcgov/actions-openshift/deployer (pin a release, not @main). Inputs are unchanged. See https://github.com/bcgov/actions-openshift/tree/main/deployer"
+
     - name: Context Diagnostics
       if: inputs.debug
       shell: bash
